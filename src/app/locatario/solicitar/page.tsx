@@ -100,7 +100,7 @@ export default function SolicitarPage() {
   const canSubmit = !enviando && seleccionados.length > 0 && !perfilIncompleto;
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-4 md:p-8 max-w-2xl">
       <h1 className="text-2xl font-semibold text-gray-900 mb-1">Solicitar promo</h1>
       <p className="text-sm text-gray-500 mb-6">Semana {semanaActual} · Envía hasta el martes · Máximo 5 productos</p>
 
@@ -231,7 +231,7 @@ export default function SolicitarPage() {
       <button
         onClick={enviar}
         disabled={!canSubmit}
-        className="bg-blue-600 text-white font-medium px-6 py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-40 transition-colors"
+        className="w-full sm:w-auto bg-blue-600 text-white font-medium px-6 py-3 rounded-xl hover:bg-blue-700 disabled:opacity-40 transition-colors text-base"
       >
         {enviando ? "Enviando..." : "Enviar solicitud"}
       </button>

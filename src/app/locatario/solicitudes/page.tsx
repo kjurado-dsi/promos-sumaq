@@ -90,7 +90,7 @@ export default function SolicitudesPage() {
   };
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-4 md:p-8 max-w-2xl">
       {lightbox && (
         <Lightbox
           url={lightbox.url}

@@ -91,7 +91,7 @@ export default function MarketingCatalogosPage() {
   const gruposOrdenados = Object.entries(grupos).sort(([a], [b]) => a.localeCompare(b));
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       {lightbox && (
         <Lightbox
           url={lightbox.url}

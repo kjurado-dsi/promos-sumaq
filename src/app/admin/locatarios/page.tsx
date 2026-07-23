@@ -74,7 +74,7 @@ export default function LocatariosPage() {
   );
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-4 md:p-8 max-w-4xl">
       <h1 className="text-2xl font-semibold text-gray-900 mb-6">Gestión de usuarios</h1>
 
       {/* Emails autorizados */}
@@ -85,31 +85,33 @@ export default function LocatariosPage() {
         </div>
         <div className="p-5">
           {/* Formulario agregar */}
-          <div className="flex gap-2 mb-4">
+          <div className="flex flex-col sm:flex-row gap-2 mb-4">
             <input
               type="email"
               placeholder="correo@empresa.com"
               value={nuevoEmail}
               onChange={(e) => setNuevoEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && agregarEmail()}
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <select
-              value={nuevoRol}
-              onChange={(e) => setNuevoRol(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none bg-white"
-            >
-              <option value="marketing">Marketing</option>
-              <option value="admin">Admin</option>
-              <option value="locatario">Locatario</option>
-            </select>
-            <button
-              onClick={agregarEmail}
-              disabled={agregando || !nuevoEmail.trim()}
-              className="bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-40 transition-colors"
-            >
-              + Agregar
-            </button>
+            <div className="flex gap-2">
+              <select
+                value={nuevoRol}
+                onChange={(e) => setNuevoRol(e.target.value)}
+                className="flex-1 sm:flex-none border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none bg-white"
+              >
+                <option value="marketing">Marketing</option>
+                <option value="admin">Admin</option>
+                <option value="locatario">Locatario</option>
+              </select>
+              <button
+                onClick={agregarEmail}
+                disabled={agregando || !nuevoEmail.trim()}
+                className="bg-blue-600 text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-40 transition-colors whitespace-nowrap"
+              >
+                + Agregar
+              </button>
+            </div>
           </div>
 
           {emailsAutorizados.length === 0 ? (
@@ -139,13 +141,13 @@ export default function LocatariosPage() {
 
       {/* Usuarios registrados */}
       <div className="bg-white border border-gray-200 rounded-xl">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-gray-800">Usuarios registrados</h2>
+        <div className="px-4 py-3 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center gap-2">
+          <h2 className="text-sm font-semibold text-gray-800 flex-1">Usuarios registrados</h2>
           <input
-            placeholder="Buscar por nombre o email..."
+            placeholder="Buscar..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
+            className="w-full sm:w-56 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 

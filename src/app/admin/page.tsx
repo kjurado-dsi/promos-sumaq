@@ -45,7 +45,7 @@ export default function AdminPage() {
   const pct = total > 0 ? Math.round((atendidas / total) * 100) : 0;
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <h1 className="text-2xl font-semibold text-gray-900 mb-6">Panel de control</h1>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
@@ -71,41 +71,26 @@ export default function AdminPage() {
         </div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide">Locatario</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide">Productos</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide">Semana</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {solicitudes.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="text-center py-10 text-gray-400">Sin solicitudes aún</td>
-                </tr>
-              ) : (
-                solicitudes.map((s) => (
-                  <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900">{s.locatarioNombre}</p>
-                      <p className="text-xs text-gray-400">Local {s.local}</p>
-                    </td>
-                    <td className="px-4 py-3 text-gray-500">
-                      {s.productos.map((p) => p.nombre).join(", ")}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500">Sem. {s.semana}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${estadoBadge[s.estado] ?? "bg-gray-50 text-gray-600"}`}>
-                        {estadoLabel[s.estado] ?? s.estado}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          {solicitudes.length === 0 ? (
+            <p className="text-center py-10 text-gray-400 text-sm">Sin solicitudes aún</p>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {solicitudes.map((s) => (
+                <div key={s.id} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium text-gray-900 text-sm">{s.locatarioNombre}</p>
+                      <span className="text-xs text-gray-400">Local {s.local} · Sem. {s.semana}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 truncate">{s.productos.map((p) => p.nombre).join(", ")}</p>
+                  </div>
+                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 ${estadoBadge[s.estado] ?? "bg-gray-50 text-gray-600"}`}>
+                    {estadoLabel[s.estado] ?? s.estado}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

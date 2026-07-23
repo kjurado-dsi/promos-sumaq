@@ -55,13 +55,13 @@ export default function SolicitudesAdminPage() {
   const filtradas = filtro === "todas" ? solicitudes : solicitudes.filter((s) => s.estado === filtro);
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Solicitudes</h1>
-        <div className="flex gap-2">
+    <div className="p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+        <h1 className="text-2xl font-semibold text-gray-900 flex-1">Solicitudes</h1>
+        <div className="flex flex-wrap gap-2">
           {["todas", "pendiente", "en_diseno", "publicado"].map((f) => (
             <button key={f} onClick={() => setFiltro(f)}
-              className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${filtro === f ? "bg-blue-600 text-white" : "border border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
+              className={`text-xs font-medium px-3 py-2 rounded-lg transition-colors ${filtro === f ? "bg-blue-600 text-white" : "border border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
               {f === "todas" ? "Todas" : estadoLabel[f]}
             </button>
           ))}
@@ -72,56 +72,37 @@ export default function SolicitudesAdminPage() {
         <div className="flex justify-center py-10"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase">Locatario</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase">Productos</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase">Semana</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase">Fecha</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase">Estado</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtradas.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-10 text-gray-400">Sin solicitudes</td></tr>
-              ) : (
-                filtradas.map((s) => {
-                  const fecha = s.creadoEn ? new Date(s.creadoEn.seconds * 1000).toLocaleDateString("es-PE", { day: "numeric", month: "short" }) : "—";
-                  return (
-                    <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer" onClick={() => setDetalle(s)}>
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-gray-900">{s.locatarioNombre}</p>
-                        <p className="text-xs text-gray-400">Local {s.local}</p>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">
-                        {s.productos.map((p) => p.nombre).join(", ")}
-                        {s.nota && <p className="italic text-gray-400 mt-0.5">"{s.nota}"</p>}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500">Sem. {s.semana}</td>
-                      <td className="px-4 py-3 text-gray-400 text-xs">{fecha}</td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${estadoBadge[s.estado] ?? "bg-gray-50 text-gray-600"}`}>
-                          {estadoLabel[s.estado] ?? s.estado}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => eliminar(s.id)} className="text-gray-300 hover:text-red-500 transition-colors text-lg">×</button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+          {filtradas.length === 0 ? (
+            <p className="text-center py-10 text-gray-400 text-sm">Sin solicitudes</p>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {filtradas.map((s) => {
+                const fecha = s.creadoEn ? new Date(s.creadoEn.seconds * 1000).toLocaleDateString("es-PE", { day: "numeric", month: "short" }) : "—";
+                return (
+                  <div key={s.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer" onClick={() => setDetalle(s)}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-gray-900 text-sm">{s.locatarioNombre}</p>
+                        <span className="text-xs text-gray-400">L.{s.local} · Sem.{s.semana} · {fecha}</span>
+                      </div>
+                      <p className="text-xs text-gray-500 truncate">{s.productos.map((p) => p.nombre).join(", ")}</p>
+                    </div>
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 ${estadoBadge[s.estado] ?? "bg-gray-50 text-gray-600"}`}>
+                      {estadoLabel[s.estado] ?? s.estado}
+                    </span>
+                    <button onClick={(e) => { e.stopPropagation(); eliminar(s.id); }} className="text-gray-300 hover:text-red-500 transition-colors text-xl leading-none flex-shrink-0 p-1">×</button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
       {/* Modal de detalle */}
       {detalle && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDetalle(null)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 sm:p-4" onClick={() => setDetalle(null)}>
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="p-5 border-b border-gray-100 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">{detalle.locatarioNombre}</h2>

@@ -74,8 +74,8 @@ function ModalCola({ solicitudes, onClose }: { solicitudes: Solicitud[]; onClose
   const listos = solicitudes.filter((s) => enviados.has(s.id));
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-2xl">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[85vh] flex flex-col shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
           <div>
@@ -186,7 +186,7 @@ export default function PublicadasPage() {
   const promosSemana = solicitudes.filter((s) => s.semana === semanaActual);
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       {lightbox && (
         <Lightbox
           url={lightbox.url}

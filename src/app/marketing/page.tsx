@@ -169,7 +169,7 @@ export default function MarketingPage() {
   const solicitudModal = solicitudes.find((s) => s.id === modalId);
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       {lightbox && (
         <Lightbox
           url={lightbox.url}
@@ -199,7 +199,7 @@ export default function MarketingPage() {
           <p className="font-medium">Todo al día — no hay solicitudes pendientes</p>
         </div>
       ) : (
-        <div className="space-y-3 max-w-3xl">
+        <div className="space-y-3 max-w-3xl w-full">
           {solicitudes.map((s) => {
             const abierto = expandido === s.id;
             return (
@@ -341,8 +341,8 @@ export default function MarketingPage() {
 
       {/* Modal de publicación */}
       {modalId && solicitudModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md">
             <div className="p-6 border-b border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900">Subir diseño final</h2>
               <p className="text-sm text-gray-500 mt-0.5">

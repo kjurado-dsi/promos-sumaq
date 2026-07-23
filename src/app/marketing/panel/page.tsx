@@ -52,7 +52,7 @@ export default function MarketingPanelPage() {
   ];
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <h1 className="text-2xl font-semibold text-gray-900 mb-1">Panel de control</h1>
       <p className="text-sm text-gray-500 mb-6">Semana {semanaActual} · {porcentaje}% atendido</p>
 
@@ -78,35 +78,23 @@ export default function MarketingPanelPage() {
             {solicitudes.length === 0 ? (
               <p className="text-center py-10 text-gray-400 text-sm">Sin solicitudes esta semana</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-50">
-                    <th className="text-left px-4 py-2 text-xs text-gray-400 font-medium">Locatario</th>
-                    <th className="text-left px-4 py-2 text-xs text-gray-400 font-medium">Productos</th>
-                    <th className="text-left px-4 py-2 text-xs text-gray-400 font-medium">Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {solicitudes.map((s) => (
-                    <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-gray-800">{s.locatarioNombre}</p>
-                        <p className="text-xs text-gray-400">Local {s.local}</p>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600 text-xs">{s.productos.map((p) => p.nombre).join(", ")}</td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${
-                          s.estado === "publicado" ? "bg-green-50 text-green-700" :
-                          s.estado === "en_diseno" ? "bg-blue-50 text-blue-700" :
-                          "bg-yellow-50 text-yellow-700"
-                        }`}>
-                          {s.estado === "publicado" ? "Publicado" : s.estado === "en_diseno" ? "En diseño" : "Pendiente"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="divide-y divide-gray-50">
+                {solicitudes.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-gray-800 text-sm truncate">{s.locatarioNombre}</p>
+                      <p className="text-xs text-gray-400">Local {s.local} · {s.productos.map((p) => p.nombre).join(", ")}</p>
+                    </div>
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 ${
+                      s.estado === "publicado" ? "bg-green-50 text-green-700" :
+                      s.estado === "en_diseno" ? "bg-blue-50 text-blue-700" :
+                      "bg-yellow-50 text-yellow-700"
+                    }`}>
+                      {s.estado === "publicado" ? "Publicado" : s.estado === "en_diseno" ? "En diseño" : "Pendiente"}
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </>
