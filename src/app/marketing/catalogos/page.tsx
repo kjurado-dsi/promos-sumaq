@@ -42,6 +42,7 @@ export default function MarketingCatalogosPage() {
   const [filtroLocal, setFiltroLocal] = useState("todos");
   const [subiendoFoto, setSubiendoFoto] = useState<{ id: string; slot: FotoSlot } | null>(null);
   const [lightbox, setLightbox] = useState<{ url: string; nombre: string } | null>(null);
+  const [colapsados, setColapsados] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -89,7 +90,6 @@ export default function MarketingCatalogosPage() {
     return acc;
   }, {});
   const gruposOrdenados = Object.entries(grupos).sort(([a], [b]) => a.localeCompare(b));
-  const [colapsados, setColapsados] = useState<Set<string>>(new Set());
   const toggleGrupo = (key: string) =>
     setColapsados((prev) => { const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s; });
 
