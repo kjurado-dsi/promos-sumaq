@@ -39,6 +39,7 @@ const navByRole: Record<string, NavItem[]> = {
     { label: "Dashboard", href: "/admin", icon: "📊" },
     { label: "Locatarios", href: "/admin/locatarios", icon: "👥" },
     { label: "Solicitudes promo", href: "/admin/solicitudes", icon: "📋" },
+    { label: "Catálogos", href: "/admin/catalogos", icon: "📦" },
     { divider: true, label: "Comunicaciones" },
     { label: "Reportes", href: "/admin/reportes", icon: "🔔" },
   ],

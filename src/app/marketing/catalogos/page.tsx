@@ -89,6 +89,9 @@ export default function MarketingCatalogosPage() {
     return acc;
   }, {});
   const gruposOrdenados = Object.entries(grupos).sort(([a], [b]) => a.localeCompare(b));
+  const [colapsados, setColapsados] = useState<Set<string>>(new Set());
+  const toggleGrupo = (key: string) =>
+    setColapsados((prev) => { const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s; });
 
   return (
     <div className="p-4 md:p-8">
@@ -150,18 +153,23 @@ export default function MarketingCatalogosPage() {
         <div className="space-y-8 max-w-4xl">
           {gruposOrdenados.map(([key, prods]) => {
             const p0 = prods[0];
+            const colapsado = colapsados.has(key);
             return (
               <div key={key}>
-                {/* Cabecera del grupo */}
-                <div className="flex items-center gap-3 mb-3">
+                {/* Cabecera del grupo — clic para colapsar */}
+                <button
+                  onClick={() => toggleGrupo(key)}
+                  className="w-full flex items-center gap-3 mb-3 hover:opacity-80 transition-opacity text-left"
+                >
                   <span className="bg-blue-900 text-white text-xs font-bold px-3 py-1 rounded-lg">
                     Local {p0.local ?? "—"}
                   </span>
                   <span className="text-sm font-semibold text-gray-800">{p0.locatarioNombre ?? "Sin nombre"}</span>
                   <span className="text-xs text-gray-400">{prods.length} producto{prods.length !== 1 ? "s" : ""}</span>
-                </div>
+                  <span className="ml-auto text-gray-400 text-sm">{colapsado ? "▶" : "▼"}</span>
+                </button>
 
-                <div className="space-y-2">
+                {!colapsado && <div className="space-y-2">
                   {prods.map((p) => {
                     const fotos = [p.fotoUrl, p.foto2Url, p.foto3Url].filter(Boolean) as string[];
                     return (
@@ -202,7 +210,7 @@ export default function MarketingCatalogosPage() {
                       </div>
                     );
                   })}
-                </div>
+                </div>}
               </div>
             );
           })}
