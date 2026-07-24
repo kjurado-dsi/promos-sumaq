@@ -20,7 +20,7 @@ const LOGO_ICONO = "https://lh3.googleusercontent.com/d/1W27Jd23pjCvkMfP7JA3Od0P
 const navByRole: Record<string, NavItem[]> = {
   locatario: [
     { label: "Mi perfil", href: "/locatario/perfil", icon: "👤" },
-    { divider: true, label: "Comunicaciones" },
+    { divider: true, label: "Soporte Operaciones" },
     { label: "Reportar", href: "/locatario/reportar", icon: "📝" },
     { label: "Mis reportes", href: "/locatario/reportes", icon: "📋" },
     { divider: true, label: "Promociones" },
@@ -40,7 +40,7 @@ const navByRole: Record<string, NavItem[]> = {
     { label: "Locatarios", href: "/admin/locatarios", icon: "👥" },
     { label: "Solicitudes promo", href: "/admin/solicitudes", icon: "📋" },
     { label: "Catálogos", href: "/admin/catalogos", icon: "📦" },
-    { divider: true, label: "Comunicaciones" },
+    { divider: true, label: "Soporte Operaciones" },
     { label: "Reportes", href: "/admin/reportes", icon: "🔔" },
   ],
 };
@@ -84,8 +84,10 @@ export default function Sidebar() {
         {items.map((item, i) => {
           if (item.divider) {
             return (
-              <div key={`div-${i}`} className="px-3 pt-4 pb-1">
-                <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">{item.label}</p>
+              <div key={`div-${i}`} className="px-3 pt-5 pb-1 flex items-center gap-2">
+                <div className="h-px flex-1 bg-gray-100" />
+                <p className="text-[10px] font-bold text-[#0d1f3c]/50 uppercase tracking-widest whitespace-nowrap">{item.label}</p>
+                <div className="h-px flex-1 bg-gray-100" />
               </div>
             );
           }
