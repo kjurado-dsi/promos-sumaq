@@ -75,22 +75,12 @@ export default function Sidebar() {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      <div className="border-b border-gray-100">
-        <div
-          className="h-1.5 w-full"
-          style={{ backgroundImage: `url(https://lh3.googleusercontent.com/d/1Aq8I1TmiNoVZjLjIEoQ8nnuewMbLvA1B)`, backgroundSize: "auto 100%", backgroundRepeat: "repeat-x" }}
+      <div className="border-b border-gray-100 px-4 py-3 flex justify-center">
+        <img
+          src="https://lh3.googleusercontent.com/d/1805yoxKxdQRbWqmeCQ8abT7Efl7F-rgP"
+          alt="Sumaq Mercados"
+          className="w-12 h-12 object-contain rounded-lg"
         />
-        <div className="px-4 py-4 flex items-center gap-3">
-          <img
-            src="https://lh3.googleusercontent.com/d/1805yoxKxdQRbWqmeCQ8abT7Efl7F-rgP"
-            alt="Sumaq Mercados"
-            className="w-10 h-10 object-contain rounded-lg flex-shrink-0"
-          />
-          <div>
-            <p className="text-sm font-bold text-[#0d1f3c] leading-tight">Sumaq Mercados</p>
-            <p className="text-[10px] text-gray-400 leading-tight">Plataforma de promos</p>
-          </div>
-        </div>
       </div>
 
       <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">

@@ -24,15 +24,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   const BG = "https://lh3.googleusercontent.com/d/1RMvsoCts0Q6aamBZL6ft57x7S-o2CSLp";
+  const bgStyle = {
+    backgroundImage: `linear-gradient(rgba(255,255,255,0.82),rgba(255,255,255,0.82)),url(${BG})`,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    backgroundAttachment: "fixed",
+  };
 
   return (
-    <div
-      className="flex min-h-screen"
-      style={{ backgroundImage: `url(${BG})`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }}
-    >
-      <div className="absolute inset-0 bg-white/85 pointer-events-none" style={{ position: "fixed" }} />
+    <div className="flex min-h-screen bg-white">
       <Sidebar />
-      <main className="flex-1 overflow-auto pt-14 md:pt-0 relative">{children}</main>
+      <main className="flex-1 overflow-auto pt-14 md:pt-0" style={bgStyle}>{children}</main>
     </div>
   );
 }

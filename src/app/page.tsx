@@ -42,13 +42,13 @@ export default function Home() {
 
       {/* Pattern strip top */}
       <div
-        className="absolute top-0 left-0 right-0 h-24 md:h-32"
+        className="absolute top-0 left-0 right-0 h-12 md:h-16"
         style={{ backgroundImage: `url(${PATTERN})`, backgroundSize: "auto 100%", backgroundRepeat: "repeat-x" }}
       />
 
       {/* Pattern strip bottom */}
       <div
-        className="absolute bottom-0 left-0 right-0 h-24 md:h-32"
+        className="absolute bottom-0 left-0 right-0 h-12 md:h-16"
         style={{ backgroundImage: `url(${PATTERN})`, backgroundSize: "auto 100%", backgroundRepeat: "repeat-x" }}
       />
 
@@ -67,11 +67,7 @@ export default function Home() {
             />
 
             <div className="text-center">
-              <h1 className="text-xl font-bold text-[#0d1f3c]">Sumaq Mercados</h1>
-              <p className="text-xs text-[#c85c2d] font-semibold uppercase tracking-widest mt-0.5">
-                El mercado más moderno del Perú
-              </p>
-              <p className="text-sm text-gray-500 mt-2">Plataforma de promociones</p>
+              <p className="text-sm text-gray-500">Plataforma de promociones</p>
             </div>
 
             <button
