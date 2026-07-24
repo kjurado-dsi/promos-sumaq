@@ -39,14 +39,14 @@ export default function IosInstallBanner() {
         </div>
 
         <p className="text-xs text-white/80 mb-3">
-          Para agregar esta app a tu pantalla de inicio, ábrela en <span className="font-bold text-white">Safari</span> y sigue estos pasos:
+          Instálala en tu iPhone en 3 pasos desde <span className="font-bold text-white">Safari o Chrome</span>:
         </p>
 
         <div className="space-y-2">
           {[
-            { n: "1", text: 'Toca el botón compartir', icon: "⬆" },
-            { n: "2", text: '"Agregar a pantalla de inicio"', icon: "➕" },
-            { n: "3", text: 'Toca "Agregar"', icon: "✅" },
+            { n: "1", text: 'Toca el botón compartir de tu navegador', icon: "⬆" },
+            { n: "2", text: 'Selecciona "Agregar a pantalla de inicio"', icon: "➕" },
+            { n: "3", text: 'Toca "Agregar" para confirmar', icon: "✅" },
           ].map(({ n, text, icon }) => (
             <div key={n} className="flex items-center gap-3 bg-white/10 rounded-xl px-3 py-2">
               <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold flex-shrink-0">{n}</span>
