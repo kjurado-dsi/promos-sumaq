@@ -10,11 +10,9 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 
-interface NavItem {
-  label: string;
-  href: string;
-  icon: string;
-}
+type NavItem =
+  | { divider: true; label: string; href?: undefined; icon?: undefined }
+  | { divider?: false; label: string; href: string; icon: string };
 
 const navByRole: Record<string, NavItem[]> = {
   locatario: [
@@ -23,6 +21,9 @@ const navByRole: Record<string, NavItem[]> = {
     { label: "Solicitar promo", href: "/locatario/solicitar", icon: "📤" },
     { label: "Mis solicitudes", href: "/locatario/solicitudes", icon: "🕐" },
     { label: "Mi perfil", href: "/locatario/perfil", icon: "👤" },
+    { divider: true, label: "Comunicaciones" },
+    { label: "Reportar", href: "/locatario/reportar", icon: "📝" },
+    { label: "Mis reportes", href: "/locatario/reportes", icon: "📋" },
   ],
   marketing: [
     { label: "Panel", href: "/marketing/panel", icon: "📊" },
@@ -33,7 +34,9 @@ const navByRole: Record<string, NavItem[]> = {
   admin: [
     { label: "Dashboard", href: "/admin", icon: "📊" },
     { label: "Locatarios", href: "/admin/locatarios", icon: "👥" },
-    { label: "Solicitudes", href: "/admin/solicitudes", icon: "📋" },
+    { label: "Solicitudes promo", href: "/admin/solicitudes", icon: "📋" },
+    { divider: true, label: "Comunicaciones" },
+    { label: "Reportes", href: "/admin/reportes", icon: "🔔" },
   ],
 };
 
@@ -64,7 +67,7 @@ export default function Sidebar() {
     router.push(dest);
   };
 
-  const currentItem = items.find((i) => i.href === pathname);
+  const currentItem = items.find((i) => !i.divider && i.href === pathname);
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -76,14 +79,21 @@ export default function Sidebar() {
         />
       </div>
 
-      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
-        {items.map((item) => {
+      <nav className="flex-1 px-2 py-3 overflow-y-auto">
+        {items.map((item, i) => {
+          if (item.divider) {
+            return (
+              <div key={`div-${i}`} className="px-3 pt-4 pb-1">
+                <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">{item.label}</p>
+              </div>
+            );
+          }
           const active = pathname === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors mb-0.5 ${
                 active
                   ? "bg-blue-50 text-blue-700 font-medium"
                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
