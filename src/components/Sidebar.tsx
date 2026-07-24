@@ -179,7 +179,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-60 min-h-screen bg-white border-r border-gray-200 flex-col flex-shrink-0">
+      <aside className="hidden md:flex w-72 min-h-screen bg-white border-r border-gray-200 flex-col flex-shrink-0">
         <SidebarContent />
       </aside>
 
