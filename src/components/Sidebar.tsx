@@ -84,10 +84,8 @@ export default function Sidebar() {
         {items.map((item, i) => {
           if (item.divider) {
             return (
-              <div key={`div-${i}`} className="px-3 pt-5 pb-1 flex items-center gap-2">
-                <div className="h-px flex-1 bg-gray-100" />
-                <p className="text-[10px] font-bold text-[#0d1f3c]/50 uppercase tracking-widest whitespace-nowrap">{item.label}</p>
-                <div className="h-px flex-1 bg-gray-100" />
+              <div key={`div-${i}`} className="px-3 pt-5 pb-1">
+                <p className="text-xs font-bold text-[#0d1f3c] uppercase tracking-wide">{item.label}</p>
               </div>
             );
           }
