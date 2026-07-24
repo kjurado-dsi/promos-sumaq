@@ -14,7 +14,7 @@ type NavItem =
   | { divider: true; label: string; href?: undefined; icon?: undefined }
   | { divider?: false; label: string; href: string; icon: string };
 
-const LOGO_HORIZONTAL = "https://lh3.googleusercontent.com/d/1d6Z3i3ubWLfMFt_hnN8z1Da9npfBUN24";
+const LOGO_HORIZONTAL = "https://lh3.googleusercontent.com/d/1P3vyVuQucIDpOYaJucmWJ_qlmrU8BExu";
 const LOGO_ICONO = "https://lh3.googleusercontent.com/d/1W27Jd23pjCvkMfP7JA3Od0PcQ_1XzqPc";
 
 const navByRole: Record<string, NavItem[]> = {
@@ -75,8 +75,8 @@ export default function Sidebar() {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      <div className="border-b border-gray-100 px-4 py-3">
-        <img src={LOGO_HORIZONTAL} alt="Sumaq Mercados" className="block h-10 w-auto" />
+      <div className="border-b border-gray-100">
+        <img src={LOGO_HORIZONTAL} alt="Sumaq Mercados" className="w-full h-auto block" />
       </div>
 
       <nav className="flex-1 px-2 py-3 overflow-y-auto">
