@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 
 const BG = "https://lh3.googleusercontent.com/d/1RMvsoCts0Q6aamBZL6ft57x7S-o2CSLp";
-const LOGO = "https://lh3.googleusercontent.com/d/1d6Z3i3ubWLfMFt_hnN8z1Da9npfBUN24";
+const LOGO = "https://lh3.googleusercontent.com/d/1P3vyVuQucIDpOYaJucmWJ_qlmrU8BExu";
 const PATTERN = "https://lh3.googleusercontent.com/d/1Aq8I1TmiNoVZjLjIEoQ8nnuewMbLvA1B";
 
 export default function Home() {
