@@ -75,8 +75,8 @@ export default function Sidebar() {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      <div className="border-b border-gray-100 py-4 flex justify-center overflow-hidden">
-        <img src={LOGO_HORIZONTAL} alt="Sumaq Mercados" style={{ height: 48, width: "auto", maxWidth: "100%" }} />
+      <div className="border-b border-gray-100 px-4 py-3">
+        <img src={LOGO_HORIZONTAL} alt="Sumaq Mercados" className="block h-10 w-auto" />
       </div>
 
       <nav className="flex-1 px-2 py-3 overflow-y-auto">
