@@ -40,17 +40,6 @@ export default function Home() {
       {/* Dark overlay */}
       <div className="absolute inset-0 bg-[#0d1f3c]/55" />
 
-      {/* Pattern strip top */}
-      <div
-        className="absolute top-0 left-0 right-0 h-12 md:h-16"
-        style={{ backgroundImage: `url(${PATTERN})`, backgroundSize: "auto 100%", backgroundRepeat: "repeat-x" }}
-      />
-
-      {/* Pattern strip bottom */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-12 md:h-16"
-        style={{ backgroundImage: `url(${PATTERN})`, backgroundSize: "auto 100%", backgroundRepeat: "repeat-x" }}
-      />
 
       {/* Card */}
       <div className="relative z-10 w-full max-w-sm mx-4">

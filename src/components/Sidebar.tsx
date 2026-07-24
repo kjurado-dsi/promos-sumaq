@@ -118,21 +118,26 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {canSwitch && (
+        {canSwitch && role !== "admin" && (
+          <button
+            onClick={() => handleSwitchRole("admin")}
+            className="w-full flex items-center justify-center gap-2 mb-2 px-3 py-2 bg-[#0d1f3c] text-white text-xs font-semibold rounded-lg hover:bg-[#1a2f52] transition-colors"
+          >
+            ← Volver a Admin
+          </button>
+        )}
+
+        {canSwitch && role === "admin" && (
           <div className="mb-2">
             <p className="text-xs text-gray-400 px-2 mb-1">Vista rápida</p>
             <div className="flex gap-1">
-              {(["admin", "marketing", "locatario"] as const).map((r) => (
+              {(["marketing", "locatario"] as const).map((r) => (
                 <button
                   key={r}
                   onClick={() => handleSwitchRole(r)}
-                  className={`flex-1 text-xs py-1.5 rounded-md border transition-colors ${
-                    role === r
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "border-gray-200 text-gray-500 hover:bg-gray-50"
-                  }`}
+                  className="flex-1 text-xs py-1.5 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
                 >
-                  {r === "admin" ? "Adm" : r === "marketing" ? "Mkt" : "Loc"}
+                  {r === "marketing" ? "Ver Mkt" : "Ver Loc"}
                 </button>
               ))}
             </div>
