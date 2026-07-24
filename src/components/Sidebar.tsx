@@ -38,7 +38,7 @@ const navByRole: Record<string, NavItem[]> = {
 };
 
 export default function Sidebar() {
-  const { user, role, logOut, switchRole } = useAuth();
+  const { user, role, originalRole, logOut, switchRole } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -53,17 +53,10 @@ export default function Sidebar() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  const originalRole = useRef<string | null>(null);
-  useEffect(() => {
-    if (role && originalRole.current === null) {
-      originalRole.current = role;
-    }
-  }, [role]);
-
   // Close drawer on route change
   useEffect(() => { setOpen(false); }, [pathname]);
 
-  const canSwitch = originalRole.current === "admin";
+  const canSwitch = originalRole === "admin";
 
   const handleSwitchRole = async (newRole: "admin" | "marketing" | "locatario") => {
     await switchRole(newRole);
