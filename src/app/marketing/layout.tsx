@@ -25,7 +25,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
 
   const BG = "https://lh3.googleusercontent.com/d/1RMvsoCts0Q6aamBZL6ft57x7S-o2CSLp";
   const bgStyle = {
-    backgroundImage: `linear-gradient(rgba(255,255,255,0.82),rgba(255,255,255,0.82)),url(${BG})`,
+    backgroundImage: `linear-gradient(rgba(255,255,255,0.93),rgba(255,255,255,0.93)),url(${BG})`,
     backgroundSize: "cover",
     backgroundPosition: "center",
     backgroundAttachment: "fixed",

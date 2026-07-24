@@ -37,6 +37,7 @@ export default function SolicitarPage() {
   const [fechaFin, setFechaFin] = useState(en6dias);
   const [nota, setNota] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [loadingProductos, setLoadingProductos] = useState(true);
 
   // Restore draft from localStorage on mount
   useEffect(() => {
@@ -70,6 +71,7 @@ export default function SolicitarPage() {
     if (!user) return;
     getDocs(query(collection(db, "productos"), where("uid", "==", user.uid))).then((snap) => {
       setProductos(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Producto)));
+      setLoadingProductos(false);
     });
     getDoc(doc(db, "users", user.uid)).then((snap) => {
       if (snap.exists()) {
@@ -160,8 +162,12 @@ export default function SolicitarPage() {
           <span className="text-xs text-gray-400">{seleccionados.length}/5 seleccionados</span>
         </div>
 
-        {productos.length === 0 ? (
-          <div className="text-center py-10 text-gray-400 bg-gray-50 rounded-xl">
+        {loadingProductos ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+          </div>
+        ) : productos.length === 0 ? (
+          <div className="text-center py-10 text-gray-400 bg-white border border-gray-200 rounded-xl">
             <p>No tienes productos en tu catálogo.</p>
             <Link href="/locatario/catalogo" className="text-blue-600 text-sm underline mt-1 inline-block">
               Agregar al catálogo
