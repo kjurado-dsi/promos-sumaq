@@ -75,8 +75,8 @@ export default function Sidebar() {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      <div className="border-b border-gray-100 px-4 py-4 flex justify-center">
-        <img src={LOGO_HORIZONTAL} alt="Sumaq Mercados" className="w-40 h-auto object-contain" />
+      <div className="border-b border-gray-100 px-3 py-4 flex justify-center">
+        <img src={LOGO_HORIZONTAL} alt="Sumaq Mercados" className="w-full h-auto object-contain" />
       </div>
 
       <nav className="flex-1 px-2 py-3 overflow-y-auto">
@@ -179,7 +179,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-52 min-h-screen bg-white border-r border-gray-200 flex-col flex-shrink-0">
+      <aside className="hidden md:flex w-60 min-h-screen bg-white border-r border-gray-200 flex-col flex-shrink-0">
         <SidebarContent />
       </aside>
 
