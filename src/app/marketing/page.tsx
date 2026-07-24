@@ -24,6 +24,7 @@ interface Solicitud {
   semana: number;
   fechaInicio?: string;
   fechaFin?: string;
+  fechaEstimada?: string;
   nota?: string;
   logoUrl?: string;
   disenoUrl?: string;
@@ -78,6 +79,10 @@ export default function MarketingPage() {
 
   const tomar = async (id: string) => {
     await updateDoc(doc(db, "solicitudes", id), { estado: "en_diseno" });
+  };
+
+  const guardarFechaEstimada = async (id: string, fecha: string) => {
+    await updateDoc(doc(db, "solicitudes", id), { fechaEstimada: fecha });
   };
 
   const expandir = async (s: Solicitud) => {
@@ -304,6 +309,21 @@ export default function MarketingPage() {
                       <div>
                         <p className="text-xs font-medium text-gray-500 mb-1">Nota del locatario</p>
                         <p className="text-sm text-gray-700 bg-white rounded-lg border border-gray-200 px-3 py-2">{s.nota}</p>
+                      </div>
+                    )}
+
+                    {s.estado === "en_diseno" && (
+                      <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex items-center gap-3">
+                        <div className="flex-1">
+                          <p className="text-xs font-semibold text-blue-700 mb-1">📅 Fecha de publicación estimada</p>
+                          <p className="text-xs text-blue-500">El locatario podrá verla en sus solicitudes</p>
+                        </div>
+                        <input
+                          type="date"
+                          defaultValue={s.fechaEstimada ?? ""}
+                          onBlur={(e) => { if (e.target.value) guardarFechaEstimada(s.id, e.target.value); }}
+                          className="border border-blue-200 bg-white rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        />
                       </div>
                     )}
 

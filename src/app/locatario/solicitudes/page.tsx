@@ -17,6 +17,7 @@ interface Solicitud {
   nota?: string;
   fechaInicio?: string;
   fechaFin?: string;
+  fechaEstimada?: string;
   disenoUrl?: string;
   creadoEn: { seconds: number };
 }
@@ -92,26 +93,48 @@ function SolicitudCard({ s, onLightbox }: { s: Solicitud; onLightbox: (url: stri
           {s.fechaInicio && (
             <p className="text-xs text-gray-500">📅 Vigencia: {s.fechaInicio} → {s.fechaFin}</p>
           )}
+          {s.fechaEstimada && (
+            <p className="text-xs text-blue-600 font-medium">🗓 Publicación estimada: {new Date(s.fechaEstimada + "T12:00:00").toLocaleDateString("es-PE", { day: "numeric", month: "long", year: "numeric" })}</p>
+          )}
           {s.nota && <p className="text-xs text-gray-400 italic">"{s.nota}"</p>}
         </div>
 
         {/* Acciones según estado */}
         {s.estado === "pendiente" && !editando && (
-          <button onClick={() => setEditando(true)} className="text-xs text-blue-600 font-medium hover:underline">
-            ✏️ Editar solicitud
-          </button>
+          <div className="space-y-2">
+            <button onClick={() => setEditando(true)} className="text-xs text-blue-600 font-medium hover:underline">
+              ✏️ Editar solicitud
+            </button>
+            <p className="text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+              💡 Puedes editar tu solicitud mientras esté pendiente. Una vez que marketing la tome, ya no podrás modificarla.
+            </p>
+          </div>
+        )}
+
+        {s.estado === "en_diseno" && (
+          <p className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+            ✏️ Marketing ya tomó tu solicitud y está trabajando en el diseño. Si necesitas cambios urgentes, contáctanos directamente.
+          </p>
         )}
 
         {s.estado === "publicado" && (
-          <div className="flex items-center gap-2 pt-1">
-            <p className="text-xs text-green-600 font-semibold flex-1">¡Tu promo fue publicada! 🎉</p>
+          <div className="space-y-2 pt-1">
+            <p className="text-xs text-green-600 font-semibold">¡Tu promo fue publicada! 🎉</p>
             {s.disenoUrl && (
-              <button
-                onClick={() => descargarDiseno(s.disenoUrl!, `promo-semana${s.semana}`)}
-                className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 transition-colors font-medium flex-shrink-0"
-              >
-                ⬇ Descargar
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => descargarDiseno(s.disenoUrl!, `promo-semana${s.semana}`)}
+                  className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 transition-colors font-medium"
+                >
+                  ⬇ Descargar
+                </button>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(s.disenoUrl!); }}
+                  className="text-xs border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                >
+                  🔗 Copiar URL
+                </button>
+              </div>
             )}
           </div>
         )}

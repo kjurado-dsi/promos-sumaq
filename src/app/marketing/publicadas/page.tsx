@@ -44,7 +44,7 @@ const WaIcon = () => (
   </svg>
 );
 
-const buildMensaje = (s: Solicitud) => {
+const buildMensaje = (s: Solicitud, incluirUrl = false) => {
   const productos = s.productos
     .map((p) => `• ${p.nombre}${p.precio > 0 ? ` — S/${p.precio}` : ""}`)
     .join("\n");
@@ -53,13 +53,30 @@ const buildMensaje = (s: Solicitud) => {
     `📍 *Local ${s.local} — ${s.locatarioNombre}*`,
     productos,
     fechas,
-    s.disenoUrl ?? "",
+    incluirUrl && s.disenoUrl ? s.disenoUrl : "",
   ].filter(Boolean).join("\n");
 };
 
 const enviarWa = (s: Solicitud) => {
-  const texto = buildMensaje(s);
+  const texto = buildMensaje(s, true);
   window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
+};
+
+const compartirConImagen = async (s: Solicitud) => {
+  if (s.disenoUrl && typeof navigator !== "undefined" && "share" in navigator) {
+    try {
+      const res = await fetch(s.disenoUrl);
+      const blob = await res.blob();
+      const file = new File([blob], `promo-sem${s.semana}-local${s.local}.jpg`, { type: blob.type || "image/jpeg" });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], text: buildMensaje(s) });
+        return;
+      }
+    } catch {
+      // fallback abajo
+    }
+  }
+  enviarWa(s);
 };
 
 // Modal de cola de envío semanal
@@ -114,7 +131,7 @@ function ModalCola({ solicitudes, onClose }: { solicitudes: Solicitud[]; onClose
                 )}
               </div>
               <button
-                onClick={() => { enviarWa(s); marcarEnviado(s.id); }}
+                onClick={() => { compartirConImagen(s); marcarEnviado(s.id); }}
                 className="flex items-center gap-1.5 bg-[#25D366] text-white text-xs font-medium px-3 py-2 rounded-lg hover:bg-[#1ebe5d] transition-colors flex-shrink-0"
               >
                 <WaIcon /> Enviar
@@ -245,13 +262,24 @@ export default function PublicadasPage() {
                         {s.fechaInicio && ` · ${s.fechaInicio} → ${s.fechaFin}`}
                       </p>
                     </div>
-                    <button
-                      onClick={() => enviarWa(s)}
-                      title="Compartir en WhatsApp"
-                      className="flex items-center gap-1.5 text-[#25D366] border border-[#25D366] text-xs font-medium px-2.5 py-1.5 rounded-lg hover:bg-[#25D366] hover:text-white transition-colors flex-shrink-0"
-                    >
-                      <WaIcon />
-                    </button>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {s.disenoUrl && (
+                        <button
+                          onClick={() => navigator.clipboard.writeText(s.disenoUrl!)}
+                          title="Copiar URL del diseño"
+                          className="text-gray-400 border border-gray-200 text-xs font-medium px-2.5 py-1.5 rounded-lg hover:bg-gray-50 hover:text-gray-600 transition-colors"
+                        >
+                          🔗
+                        </button>
+                      )}
+                      <button
+                        onClick={() => compartirConImagen(s)}
+                        title="Compartir en WhatsApp"
+                        className="flex items-center gap-1.5 text-[#25D366] border border-[#25D366] text-xs font-medium px-2.5 py-1.5 rounded-lg hover:bg-[#25D366] hover:text-white transition-colors"
+                      >
+                        <WaIcon />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap gap-1.5 mb-2">
