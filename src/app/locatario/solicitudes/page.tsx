@@ -48,6 +48,7 @@ export default function SolicitudesPage() {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState<{ url: string; nombre: string } | null>(null);
+  const [expandidas, setExpandidas] = useState<Set<string>>(new Set());
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ fechaInicio: "", fechaFin: "", nota: "", precios: {} as Record<number, string> });
   const [guardando, setGuardando] = useState(false);
@@ -121,19 +122,30 @@ export default function SolicitudesPage() {
 
             return (
               <div key={s.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                {/* Diseño publicado */}
+                {/* Diseño publicado — colapsable */}
                 {s.estado === "publicado" && s.disenoUrl && (
-                  <div
-                    className="relative cursor-pointer group"
-                    onClick={() => setLightbox({ url: s.disenoUrl!, nombre: `promo-semana${s.semana}` })}
-                  >
-                    <img src={s.disenoUrl} alt="Diseño" className="w-full max-h-56 object-contain bg-gray-50" />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                      <span className="opacity-0 group-hover:opacity-100 bg-white/90 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-lg shadow">
-                        🔍 Ver completo
-                      </span>
-                    </div>
-                  </div>
+                  <>
+                    <button
+                      onClick={() => setExpandidas(prev => { const n = new Set(prev); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n; })}
+                      className="w-full flex items-center justify-between px-4 py-2.5 bg-green-50 text-green-700 text-xs font-medium hover:bg-green-100 transition-colors"
+                    >
+                      <span>🎨 Ver diseño publicado</span>
+                      <span>{expandidas.has(s.id) ? "▲ Ocultar" : "▼ Expandir"}</span>
+                    </button>
+                    {expandidas.has(s.id) && (
+                      <div
+                        className="relative cursor-pointer group"
+                        onClick={() => setLightbox({ url: s.disenoUrl!, nombre: `promo-semana${s.semana}` })}
+                      >
+                        <img src={s.disenoUrl} alt="Diseño" className="w-full max-h-64 object-contain bg-gray-50" />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                          <span className="opacity-0 group-hover:opacity-100 bg-white/90 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-lg shadow">
+                            🔍 Ver completo
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <div className="p-4">
