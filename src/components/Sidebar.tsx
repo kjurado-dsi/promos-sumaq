@@ -88,7 +88,7 @@ export default function Sidebar() {
           />
           <div>
             <p className="text-sm font-bold text-[#0d1f3c] leading-tight">Sumaq Mercados</p>
-            <p className="text-[10px] text-[#c85c2d] font-semibold uppercase tracking-wider leading-tight">El mercado más moderno del Perú</p>
+            <p className="text-[10px] text-gray-400 leading-tight">Plataforma de promos</p>
           </div>
         </div>
       </div>

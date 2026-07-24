@@ -23,10 +23,16 @@ export default function LocatarioLayout({ children }: { children: React.ReactNod
     );
   }
 
+  const BG = "https://lh3.googleusercontent.com/d/1RMvsoCts0Q6aamBZL6ft57x7S-o2CSLp";
+
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div
+      className="flex min-h-screen"
+      style={{ backgroundImage: `url(${BG})`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }}
+    >
+      <div className="absolute inset-0 bg-white/85 pointer-events-none" style={{ position: "fixed" }} />
       <Sidebar />
-      <main className="flex-1 overflow-auto pt-14 md:pt-0">{children}</main>
+      <main className="flex-1 overflow-auto pt-14 md:pt-0 relative">{children}</main>
     </div>
   );
 }

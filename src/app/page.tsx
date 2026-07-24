@@ -42,25 +42,19 @@ export default function Home() {
 
       {/* Pattern strip top */}
       <div
-        className="absolute top-0 left-0 right-0 h-3"
+        className="absolute top-0 left-0 right-0 h-24 md:h-32"
         style={{ backgroundImage: `url(${PATTERN})`, backgroundSize: "auto 100%", backgroundRepeat: "repeat-x" }}
       />
 
       {/* Pattern strip bottom */}
       <div
-        className="absolute bottom-0 left-0 right-0 h-3"
+        className="absolute bottom-0 left-0 right-0 h-24 md:h-32"
         style={{ backgroundImage: `url(${PATTERN})`, backgroundSize: "auto 100%", backgroundRepeat: "repeat-x" }}
       />
 
       {/* Card */}
       <div className="relative z-10 w-full max-w-sm mx-4">
         <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden">
-          {/* Pattern header strip */}
-          <div
-            className="h-2 w-full"
-            style={{ backgroundImage: `url(${PATTERN})`, backgroundSize: "auto 100%", backgroundRepeat: "repeat-x" }}
-          />
-
           <div className="p-8 flex flex-col items-center gap-6">
             {/* Logo */}
             <img
@@ -98,11 +92,6 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Pattern footer strip */}
-          <div
-            className="h-2 w-full"
-            style={{ backgroundImage: `url(${PATTERN})`, backgroundSize: "auto 100%", backgroundRepeat: "repeat-x" }}
-          />
         </div>
 
         {/* Footer */}
