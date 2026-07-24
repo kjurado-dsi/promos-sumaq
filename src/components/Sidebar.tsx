@@ -75,9 +75,22 @@ export default function Sidebar() {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      <div className="px-4 py-5 border-b border-gray-100">
-        <p className="text-base font-bold text-gray-900">Sumaq Mercados</p>
-        <p className="text-xs text-gray-400 mt-0.5">DS Inmobiliario · Promos</p>
+      <div className="border-b border-gray-100">
+        <div
+          className="h-1.5 w-full"
+          style={{ backgroundImage: `url(https://lh3.googleusercontent.com/d/1Aq8I1TmiNoVZjLjIEoQ8nnuewMbLvA1B)`, backgroundSize: "auto 100%", backgroundRepeat: "repeat-x" }}
+        />
+        <div className="px-4 py-4 flex items-center gap-3">
+          <img
+            src="https://lh3.googleusercontent.com/d/1805yoxKxdQRbWqmeCQ8abT7Efl7F-rgP"
+            alt="Sumaq Mercados"
+            className="w-10 h-10 object-contain rounded-lg flex-shrink-0"
+          />
+          <div>
+            <p className="text-sm font-bold text-[#0d1f3c] leading-tight">Sumaq Mercados</p>
+            <p className="text-[10px] text-[#c85c2d] font-semibold uppercase tracking-wider leading-tight">El mercado más moderno del Perú</p>
+          </div>
+        </div>
       </div>
 
       <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
@@ -157,6 +170,10 @@ export default function Sidebar() {
         >
           Cerrar sesión
         </button>
+
+        <p className="text-[10px] text-gray-300 text-center mt-3 leading-tight">
+          Desarrollado y diseñado por<br />Operaciones-Sumaq
+        </p>
       </div>
     </div>
   );
@@ -170,9 +187,16 @@ export default function Sidebar() {
 
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 flex items-center justify-between px-4 h-14">
-        <div>
-          <p className="text-sm font-bold text-gray-900 leading-tight">Sumaq Mercados</p>
-          <p className="text-xs text-gray-400 leading-tight">{currentItem?.label ?? "DS Inmobiliario"}</p>
+        <div className="flex items-center gap-2">
+          <img
+            src="https://lh3.googleusercontent.com/d/1805yoxKxdQRbWqmeCQ8abT7Efl7F-rgP"
+            alt="Sumaq"
+            className="w-8 h-8 object-contain rounded-md"
+          />
+          <div>
+            <p className="text-sm font-bold text-[#0d1f3c] leading-tight">Sumaq Mercados</p>
+            <p className="text-xs text-gray-400 leading-tight">{currentItem?.label ?? "Promos"}</p>
+          </div>
         </div>
         <button
           onClick={() => setOpen(true)}
