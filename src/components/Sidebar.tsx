@@ -14,16 +14,20 @@ type NavItem =
   | { divider: true; label: string; href?: undefined; icon?: undefined }
   | { divider?: false; label: string; href: string; icon: string };
 
+const LOGO_HORIZONTAL = "https://lh3.googleusercontent.com/d/1d6Z3i3ubWLfMFt_hnN8z1Da9npfBUN24";
+const LOGO_ICONO = "https://lh3.googleusercontent.com/d/1W27Jd23pjCvkMfP7JA3Od0PcQ_1XzqPc";
+
 const navByRole: Record<string, NavItem[]> = {
   locatario: [
-    { label: "Inicio", href: "/locatario", icon: "🏠" },
-    { label: "Mi catálogo", href: "/locatario/catalogo", icon: "📦" },
-    { label: "Solicitar promo", href: "/locatario/solicitar", icon: "📤" },
-    { label: "Mis solicitudes", href: "/locatario/solicitudes", icon: "🕐" },
     { label: "Mi perfil", href: "/locatario/perfil", icon: "👤" },
     { divider: true, label: "Comunicaciones" },
     { label: "Reportar", href: "/locatario/reportar", icon: "📝" },
     { label: "Mis reportes", href: "/locatario/reportes", icon: "📋" },
+    { divider: true, label: "Promociones" },
+    { label: "Inicio", href: "/locatario", icon: "🏠" },
+    { label: "Mi catálogo", href: "/locatario/catalogo", icon: "📦" },
+    { label: "Solicitar promo", href: "/locatario/solicitar", icon: "📤" },
+    { label: "Mis solicitudes", href: "/locatario/solicitudes", icon: "🕐" },
   ],
   marketing: [
     { label: "Panel", href: "/marketing/panel", icon: "📊" },
@@ -72,11 +76,7 @@ export default function Sidebar() {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       <div className="border-b border-gray-100 px-4 py-3 flex justify-center">
-        <img
-          src="https://lh3.googleusercontent.com/d/1805yoxKxdQRbWqmeCQ8abT7Efl7F-rgP"
-          alt="Sumaq Mercados"
-          className="w-12 h-12 object-contain rounded-lg"
-        />
+        <img src={LOGO_ICONO} alt="Sumaq Mercados" className="w-12 h-12 object-contain rounded-lg" />
       </div>
 
       <nav className="flex-1 px-2 py-3 overflow-y-auto">
@@ -186,11 +186,7 @@ export default function Sidebar() {
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 flex items-center justify-between px-4 h-14">
         <div className="flex items-center gap-2">
-          <img
-            src="https://lh3.googleusercontent.com/d/1805yoxKxdQRbWqmeCQ8abT7Efl7F-rgP"
-            alt="Sumaq"
-            className="w-8 h-8 object-contain rounded-md"
-          />
+          <img src={LOGO_ICONO} alt="Sumaq" className="w-8 h-8 object-contain rounded-md" />
           <div>
             <p className="text-sm font-bold text-[#0d1f3c] leading-tight">Sumaq Mercados</p>
             <p className="text-xs text-gray-400 leading-tight">{currentItem?.label ?? "Promos"}</p>

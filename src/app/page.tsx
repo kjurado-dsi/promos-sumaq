@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 
 const BG = "https://lh3.googleusercontent.com/d/1RMvsoCts0Q6aamBZL6ft57x7S-o2CSLp";
-const LOGO = "https://lh3.googleusercontent.com/d/1805yoxKxdQRbWqmeCQ8abT7Efl7F-rgP";
+const LOGO = "https://lh3.googleusercontent.com/d/1d6Z3i3ubWLfMFt_hnN8z1Da9npfBUN24";
 const PATTERN = "https://lh3.googleusercontent.com/d/1Aq8I1TmiNoVZjLjIEoQ8nnuewMbLvA1B";
 
 export default function Home() {
@@ -49,10 +49,8 @@ export default function Home() {
             <img
               src={LOGO}
               alt="Sumaq Mercados"
-              className="w-28 h-28 object-contain rounded-xl"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
+              className="w-56 h-auto object-contain"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
 
             <div className="text-center">
