@@ -9,8 +9,15 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Promociones Sumaq Mercados",
-  description: "Plataforma de promociones para locatarios",
+  title: "Promos Sumaq Mercados",
+  description: "Plataforma de promociones para locatarios DS Inmobiliario",
+  manifest: "/manifest.json",
+  themeColor: "#2563eb",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Sumaq Promos",
+  },
 };
 
 export default function RootLayout({

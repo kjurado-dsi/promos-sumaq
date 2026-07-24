@@ -1,5 +1,10 @@
 "use client";
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -38,6 +43,15 @@ export default function Sidebar() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const items = navByRole[role ?? "locatario"] ?? [];
+  const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
+  const [installed, setInstalled] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => { e.preventDefault(); setInstallPrompt(e); };
+    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", () => setInstalled(true));
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
 
   const originalRole = useRef<string | null>(null);
   useEffect(() => {
@@ -120,6 +134,21 @@ export default function Sidebar() {
               ))}
             </div>
           </div>
+        )}
+
+        {installPrompt && !installed && (
+          <button
+            onClick={async () => {
+              const prompt = installPrompt as BeforeInstallPromptEvent;
+              prompt.prompt?.();
+              const { outcome } = await prompt.userChoice;
+              if (outcome === "accepted") setInstalled(true);
+              setInstallPrompt(null);
+            }}
+            className="w-full text-left px-3 py-1.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors mb-1 flex items-center gap-2"
+          >
+            <span>📲</span> Instalar app
+          </button>
         )}
 
         <button

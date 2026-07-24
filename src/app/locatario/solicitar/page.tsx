@@ -22,6 +22,8 @@ interface Perfil {
   logoUrl?: string;
 }
 
+const DRAFT_KEY = "solicitar_draft";
+
 export default function SolicitarPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -35,6 +37,28 @@ export default function SolicitarPage() {
   const [fechaFin, setFechaFin] = useState(en6dias);
   const [nota, setNota] = useState("");
   const [enviando, setEnviando] = useState(false);
+
+  // Restore draft from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const d = JSON.parse(saved);
+        if (d.seleccionados) setSeleccionados(d.seleccionados);
+        if (d.precios) setPrecios(d.precios);
+        if (d.nota) setNota(d.nota);
+        if (d.fechaInicio) setFechaInicio(d.fechaInicio);
+        if (d.fechaFin) setFechaFin(d.fechaFin);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // Save draft to localStorage on every change
+  useEffect(() => {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ seleccionados, precios, nota, fechaInicio, fechaFin }));
+    } catch { /* ignore */ }
+  }, [seleccionados, precios, nota, fechaInicio, fechaFin]);
 
   const semanaActual = (() => {
     const now = new Date();
@@ -78,6 +102,7 @@ export default function SolicitarPage() {
         descripcion: p.descripcion ?? "",
         fotoUrl: p.fotoUrl ?? "",
       }));
+    localStorage.removeItem(DRAFT_KEY);
     await addDoc(collection(db, "solicitudes"), {
       uid: user.uid,
       locatarioNombre: perfil.nombreCompleto,
