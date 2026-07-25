@@ -15,6 +15,7 @@ interface Solicitud {
   fechaInicio?: string;
   fechaFin?: string;
   disenoUrl?: string;
+  redSocialUrl?: string;
   creadoEn: { seconds: number };
 }
 
@@ -44,7 +45,7 @@ const WaIcon = () => (
   </svg>
 );
 
-const buildMensaje = (s: Solicitud, incluirUrl = false) => {
+const buildMensaje = (s: Solicitud) => {
   const productos = s.productos
     .map((p) => `• ${p.nombre}${p.precio > 0 ? ` — S/${p.precio}` : ""}`)
     .join("\n");
@@ -53,29 +54,27 @@ const buildMensaje = (s: Solicitud, incluirUrl = false) => {
     `📍 *Local ${s.local} — ${s.locatarioNombre}*`,
     productos,
     fechas,
-    incluirUrl && s.disenoUrl ? s.disenoUrl : "",
+    s.redSocialUrl ?? "",
   ].filter(Boolean).join("\n");
 };
 
 const esMobile = () => typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
 
 const compartirConImagen = async (s: Solicitud) => {
-  // Móvil: intentar Web Share API con imagen como archivo
+  const texto = buildMensaje(s);
+  // Móvil: Web Share API con imagen como archivo (llega como imagen real en WhatsApp)
   if (s.disenoUrl && esMobile() && typeof navigator !== "undefined" && "share" in navigator) {
     try {
       const res = await fetch(s.disenoUrl);
       const blob = await res.blob();
       const file = new File([blob], `promo-sem${s.semana}-local${s.local}.jpg`, { type: blob.type || "image/jpeg" });
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], text: buildMensaje(s, false) });
+        await navigator.share({ files: [file], text: texto });
         return;
       }
-    } catch {
-      // fallback abajo
-    }
+    } catch { /* fallback */ }
   }
-  // Desktop / fallback: incluir URL de la imagen en el texto — WhatsApp la renderiza como preview de imagen
-  const texto = buildMensaje(s, true);
+  // Desktop: texto solo (sin URL de imagen)
   window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
 };
 
