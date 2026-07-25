@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Lightbox from "@/components/Lightbox";
 
@@ -177,6 +177,13 @@ export default function PublicadasPage() {
   const [expandidas, setExpandidas] = useState<Set<string>>(new Set());
   const [modalAbierto, setModalAbierto] = useState(false);
   const [lightbox, setLightbox] = useState<{ url: string; nombre: string } | null>(null);
+  const [editandoUrl, setEditandoUrl] = useState<string | null>(null);
+  const [urlDraft, setUrlDraft] = useState("");
+
+  const guardarRedSocial = async (id: string) => {
+    await updateDoc(doc(db, "solicitudes", id), { redSocialUrl: urlDraft.trim() || null });
+    setEditandoUrl(null);
+  };
 
   useEffect(() => {
     const q = query(
@@ -299,6 +306,39 @@ export default function PublicadasPage() {
                   ) : (
                     <p className="text-xs text-gray-400 italic">Sin imagen de diseño adjunta</p>
                   )}
+
+                  {/* Link de red social editable */}
+                  <div className="mt-2">
+                    {editandoUrl === s.id ? (
+                      <div className="flex gap-2 items-center">
+                        <input
+                          autoFocus
+                          type="url"
+                          value={urlDraft}
+                          onChange={(e) => setUrlDraft(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") guardarRedSocial(s.id); if (e.key === "Escape") setEditandoUrl(null); }}
+                          placeholder="https://www.instagram.com/p/..."
+                          className="flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button onClick={() => guardarRedSocial(s.id)} className="text-xs bg-blue-600 text-white px-2.5 py-1.5 rounded-lg hover:bg-blue-700">✓</button>
+                        <button onClick={() => setEditandoUrl(null)} className="text-xs text-gray-400 hover:text-gray-600 px-1">✕</button>
+                      </div>
+                    ) : s.redSocialUrl ? (
+                      <div className="flex items-center gap-2">
+                        <a href={s.redSocialUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-purple-600 hover:underline truncate max-w-xs">
+                          📸 {s.redSocialUrl}
+                        </a>
+                        <button onClick={() => { setEditandoUrl(s.id); setUrlDraft(s.redSocialUrl ?? ""); }} className="text-xs text-gray-400 hover:text-gray-600 flex-shrink-0">✏️</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setEditandoUrl(s.id); setUrlDraft(""); }}
+                        className="text-xs text-gray-400 hover:text-purple-600 transition-colors"
+                      >
+                        + Agregar link Instagram / TikTok
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {s.disenoUrl && expandida && (
