@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, orderBy, doc, deleteDoc } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface Solicitud {
@@ -50,6 +50,11 @@ export default function SolicitudesAdminPage() {
     if (!confirm("¿Eliminar esta solicitud? Esta acción no se puede deshacer.")) return;
     await deleteDoc(doc(db, "solicitudes", id));
     if (detalle?.id === id) setDetalle(null);
+  };
+
+  const cambiarEstado = async (id: string, nuevoEstado: string) => {
+    await updateDoc(doc(db, "solicitudes", id), { estado: nuevoEstado });
+    setDetalle((prev) => prev ? { ...prev, estado: nuevoEstado } : prev);
   };
 
   const filtradas = filtro === "todas" ? solicitudes : solicitudes.filter((s) => s.estado === filtro);
@@ -108,7 +113,9 @@ export default function SolicitudesAdminPage() {
                 <h2 className="text-lg font-semibold text-gray-900">{detalle.locatarioNombre}</h2>
                 <p className="text-xs text-gray-400">Local {detalle.local} · Sem. {detalle.semana}{detalle.celular && ` · ${detalle.celular}`}</p>
               </div>
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${estadoBadge[detalle.estado]}`}>{estadoLabel[detalle.estado]}</span>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${estadoBadge[detalle.estado]}`}>{estadoLabel[detalle.estado]}</span>
+              </div>
             </div>
             <div className="p-5 space-y-4">
               {detalle.disenoUrl && (
@@ -144,7 +151,26 @@ export default function SolicitudesAdminPage() {
                   <p className="text-sm text-gray-700 italic">"{detalle.nota}"</p>
                 </div>
               )}
-              <button onClick={() => eliminar(detalle.id)} className="w-full text-red-500 text-sm border border-red-200 rounded-lg py-2 hover:bg-red-50 transition-colors mt-2">
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-2">Cambiar estado</p>
+                <div className="flex gap-2">
+                  {(["pendiente", "en_diseno", "publicado"] as const).map((e) => (
+                    <button
+                      key={e}
+                      onClick={() => cambiarEstado(detalle.id, e)}
+                      disabled={detalle.estado === e}
+                      className={`flex-1 text-xs font-medium py-2 rounded-lg border transition-colors ${
+                        detalle.estado === e
+                          ? estadoBadge[e] + " border-transparent cursor-default"
+                          : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                      }`}
+                    >
+                      {estadoLabel[e]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button onClick={() => eliminar(detalle.id)} className="w-full text-red-500 text-sm border border-red-200 rounded-lg py-2 hover:bg-red-50 transition-colors">
                 Eliminar solicitud
               </button>
             </div>

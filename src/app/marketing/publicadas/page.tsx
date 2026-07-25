@@ -62,8 +62,10 @@ const enviarWa = (s: Solicitud) => {
   window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
 };
 
+const esMobile = () => typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
+
 const compartirConImagen = async (s: Solicitud) => {
-  if (s.disenoUrl && typeof navigator !== "undefined" && "share" in navigator) {
+  if (s.disenoUrl && esMobile() && typeof navigator !== "undefined" && "share" in navigator) {
     try {
       const res = await fetch(s.disenoUrl);
       const blob = await res.blob();

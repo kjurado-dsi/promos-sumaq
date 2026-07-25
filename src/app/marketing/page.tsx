@@ -62,6 +62,8 @@ export default function MarketingPage() {
   const [disenoFile, setDisenoFile] = useState<File | null>(null);
   const [disenoPreview, setDisenoPreview] = useState<string | null>(null);
   const [subiendo, setSubiendo] = useState(false);
+  const [urlPublicada, setUrlPublicada] = useState<string | null>(null);
+  const [copiado, setCopiado] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -123,6 +125,8 @@ export default function MarketingPage() {
     setModalId(null);
     setDisenoFile(null);
     setDisenoPreview(null);
+    setUrlPublicada(null);
+    setCopiado(false);
   };
 
   const handleDiseno = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -165,7 +169,8 @@ export default function MarketingPage() {
         }),
       });
     }
-    cerrarModal();
+    if (disenoUrl) setUrlPublicada(disenoUrl);
+    else cerrarModal();
     setSubiendo(false);
   };
 
@@ -370,42 +375,65 @@ export default function MarketingPage() {
               </p>
             </div>
             <div className="p-6">
-              <input ref={fileRef} type="file" accept="image/*" onChange={handleDiseno} className="hidden" />
-              {disenoPreview ? (
-                <div className="relative mb-4">
-                  <img src={disenoPreview} alt="Diseño" className="w-full max-h-64 object-contain rounded-xl border border-gray-200" />
-                  <button
-                    onClick={() => { setDisenoPreview(null); setDisenoFile(null); }}
-                    className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full text-sm flex items-center justify-center"
-                  >
-                    ×
+              {urlPublicada && (
+                <div className="text-center space-y-4">
+                  <div className="text-4xl">✅</div>
+                  <p className="font-semibold text-gray-900">¡Publicado exitosamente!</p>
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                    <p className="text-xs text-gray-500 mb-2">URL del diseño — comparte con el locatario</p>
+                    <p className="text-xs text-blue-600 break-all mb-3 font-mono">{urlPublicada}</p>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(urlPublicada); setCopiado(true); }}
+                      className={`w-full py-2 rounded-lg text-sm font-medium transition-colors ${copiado ? "bg-green-100 text-green-700" : "bg-[#0d1f3c] text-white hover:bg-[#1a3358]"}`}
+                    >
+                      {copiado ? "✓ URL copiada" : "🔗 Copiar URL"}
+                    </button>
+                  </div>
+                  <button onClick={cerrarModal} className="w-full text-sm text-gray-500 hover:text-gray-700 py-2">
+                    Cerrar
                   </button>
                 </div>
-              ) : (
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  className="w-full border-2 border-dashed border-gray-300 rounded-xl py-12 text-center hover:border-blue-400 transition-colors mb-4"
-                >
-                  <p className="text-3xl mb-2">🎨</p>
-                  <p className="text-sm font-medium text-gray-600">Seleccionar imagen del diseño</p>
-                  <p className="text-xs text-gray-400 mt-1">Puedes publicar sin imagen si prefieres</p>
-                </button>
               )}
-              <div className="flex gap-3">
-                <button
-                  onClick={confirmarPublicar}
-                  disabled={subiendo}
-                  className="flex-1 bg-green-600 text-white font-medium py-2.5 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors"
-                >
-                  {subiendo ? "Publicando..." : "Confirmar publicación ✓"}
-                </button>
-                <button
-                  onClick={cerrarModal}
-                  className="px-4 border border-gray-300 text-gray-600 rounded-xl hover:bg-gray-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
+              {!urlPublicada && (
+                <>
+                  <input ref={fileRef} type="file" accept="image/*" onChange={handleDiseno} className="hidden" />
+                  {disenoPreview ? (
+                    <div className="relative mb-4">
+                      <img src={disenoPreview} alt="Diseño" className="w-full max-h-64 object-contain rounded-xl border border-gray-200" />
+                      <button
+                        onClick={() => { setDisenoPreview(null); setDisenoFile(null); }}
+                        className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full text-sm flex items-center justify-center"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => fileRef.current?.click()}
+                      className="w-full border-2 border-dashed border-gray-300 rounded-xl py-12 text-center hover:border-blue-400 transition-colors mb-4"
+                    >
+                      <p className="text-3xl mb-2">🎨</p>
+                      <p className="text-sm font-medium text-gray-600">Seleccionar imagen del diseño</p>
+                      <p className="text-xs text-gray-400 mt-1">Puedes publicar sin imagen si prefieres</p>
+                    </button>
+                  )}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={confirmarPublicar}
+                      disabled={subiendo}
+                      className="flex-1 bg-green-600 text-white font-medium py-2.5 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors"
+                    >
+                      {subiendo ? "Publicando..." : "Confirmar publicación ✓"}
+                    </button>
+                    <button
+                      onClick={cerrarModal}
+                      className="px-4 border border-gray-300 text-gray-600 rounded-xl hover:bg-gray-50 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
