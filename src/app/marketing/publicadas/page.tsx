@@ -63,7 +63,7 @@ const esMobile = () => typeof navigator !== "undefined" && navigator.maxTouchPoi
 const compartirConImagen = async (s: Solicitud) => {
   const texto = buildMensaje(s);
   // Móvil: Web Share API con imagen como archivo (llega como imagen real en WhatsApp)
-  if (s.disenoUrl && esMobile() && typeof navigator !== "undefined" && "share" in navigator) {
+  if (s.disenoUrl && typeof navigator !== "undefined" && "share" in navigator) {
     try {
       const res = await fetch(s.disenoUrl);
       const blob = await res.blob();

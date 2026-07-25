@@ -144,8 +144,7 @@ export default function MarketingPage() {
       redSocialUrl.trim(),
     ].filter(Boolean).join("\n");
 
-    const esMobile = typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
-    if (esMobile && "share" in navigator) {
+    if ("share" in navigator) {
       try {
         const res = await fetch(urlPublicada);
         const blob = await res.blob();
