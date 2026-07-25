@@ -58,7 +58,7 @@ const buildMensaje = (s: Solicitud, incluirUrl = false) => {
 };
 
 const enviarWa = (s: Solicitud) => {
-  const texto = buildMensaje(s, true);
+  const texto = buildMensaje(s, false);
   window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
 };
 

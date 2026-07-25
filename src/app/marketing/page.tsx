@@ -365,15 +365,17 @@ export default function MarketingPage() {
       )}
 
       {/* Modal de publicación */}
-      {modalId && solicitudModal && (
+      {modalId && (solicitudModal || urlPublicada) && (
         <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 sm:p-4">
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md">
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-900">Subir diseño final</h2>
-              <p className="text-sm text-gray-500 mt-0.5">
-                {solicitudModal.locatarioNombre} · Local {solicitudModal.local}
-              </p>
-            </div>
+            {!urlPublicada && solicitudModal && (
+              <div className="p-6 border-b border-gray-100">
+                <h2 className="text-lg font-semibold text-gray-900">Subir diseño final</h2>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {solicitudModal.locatarioNombre} · Local {solicitudModal.local}
+                </p>
+              </div>
+            )}
             <div className="p-6">
               {urlPublicada && (
                 <div className="text-center space-y-4">
