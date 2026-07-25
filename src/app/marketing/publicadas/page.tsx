@@ -57,28 +57,26 @@ const buildMensaje = (s: Solicitud, incluirUrl = false) => {
   ].filter(Boolean).join("\n");
 };
 
-const enviarWa = (s: Solicitud) => {
-  const texto = buildMensaje(s, false);
-  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
-};
-
 const esMobile = () => typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
 
 const compartirConImagen = async (s: Solicitud) => {
+  // Móvil: intentar Web Share API con imagen como archivo
   if (s.disenoUrl && esMobile() && typeof navigator !== "undefined" && "share" in navigator) {
     try {
       const res = await fetch(s.disenoUrl);
       const blob = await res.blob();
       const file = new File([blob], `promo-sem${s.semana}-local${s.local}.jpg`, { type: blob.type || "image/jpeg" });
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], text: buildMensaje(s) });
+        await navigator.share({ files: [file], text: buildMensaje(s, false) });
         return;
       }
     } catch {
       // fallback abajo
     }
   }
-  enviarWa(s);
+  // Desktop / fallback: incluir URL de la imagen en el texto — WhatsApp la renderiza como preview de imagen
+  const texto = buildMensaje(s, true);
+  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
 };
 
 // Modal de cola de envío semanal

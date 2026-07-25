@@ -61,6 +61,7 @@ export default function MarketingPage() {
   const [modalId, setModalId] = useState<string | null>(null);
   const [disenoFile, setDisenoFile] = useState<File | null>(null);
   const [disenoPreview, setDisenoPreview] = useState<string | null>(null);
+  const [redSocialUrl, setRedSocialUrl] = useState("");
   const [subiendo, setSubiendo] = useState(false);
   const [urlPublicada, setUrlPublicada] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
@@ -125,6 +126,7 @@ export default function MarketingPage() {
     setModalId(null);
     setDisenoFile(null);
     setDisenoPreview(null);
+    setRedSocialUrl("");
     setUrlPublicada(null);
     setCopiado(false);
   };
@@ -151,6 +153,7 @@ export default function MarketingPage() {
     await updateDoc(doc(db, "solicitudes", modalId), {
       estado: "publicado",
       ...(disenoUrl && { disenoUrl }),
+      ...(redSocialUrl.trim() && { redSocialUrl: redSocialUrl.trim() }),
       publicadoEn: new Date(),
     });
     // Enviar correo al locatario
@@ -399,31 +402,47 @@ export default function MarketingPage() {
               {!urlPublicada && (
                 <>
                   <input ref={fileRef} type="file" accept="image/*" onChange={handleDiseno} className="hidden" />
+
+                  {/* Imagen del diseño — obligatoria */}
                   {disenoPreview ? (
                     <div className="relative mb-4">
                       <img src={disenoPreview} alt="Diseño" className="w-full max-h-64 object-contain rounded-xl border border-gray-200" />
                       <button
                         onClick={() => { setDisenoPreview(null); setDisenoFile(null); }}
                         className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full text-sm flex items-center justify-center"
-                      >
-                        ×
-                      </button>
+                      >×</button>
                     </div>
                   ) : (
                     <button
                       onClick={() => fileRef.current?.click()}
-                      className="w-full border-2 border-dashed border-gray-300 rounded-xl py-12 text-center hover:border-blue-400 transition-colors mb-4"
+                      className="w-full border-2 border-dashed border-red-200 bg-red-50 rounded-xl py-10 text-center hover:border-red-400 transition-colors mb-4"
                     >
                       <p className="text-3xl mb-2">🎨</p>
-                      <p className="text-sm font-medium text-gray-600">Seleccionar imagen del diseño</p>
-                      <p className="text-xs text-gray-400 mt-1">Puedes publicar sin imagen si prefieres</p>
+                      <p className="text-sm font-medium text-gray-700">Seleccionar imagen del diseño</p>
+                      <p className="text-xs text-red-400 mt-1 font-medium">Obligatorio para publicar</p>
                     </button>
                   )}
+
+                  {/* URL de red social — opcional */}
+                  <div className="mb-4">
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                      Link de Instagram / TikTok <span className="text-gray-300 font-normal">(opcional)</span>
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://www.instagram.com/p/..."
+                      value={redSocialUrl}
+                      onChange={(e) => setRedSocialUrl(e.target.value)}
+                      className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">El locatario verá este link para ver su diseño publicado</p>
+                  </div>
+
                   <div className="flex gap-3">
                     <button
                       onClick={confirmarPublicar}
-                      disabled={subiendo}
-                      className="flex-1 bg-green-600 text-white font-medium py-2.5 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors"
+                      disabled={subiendo || !disenoPreview}
+                      className="flex-1 bg-green-600 text-white font-medium py-2.5 rounded-xl hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       {subiendo ? "Publicando..." : "Confirmar publicación ✓"}
                     </button>

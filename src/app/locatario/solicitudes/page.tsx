@@ -19,6 +19,7 @@ interface Solicitud {
   fechaFin?: string;
   fechaEstimada?: string;
   disenoUrl?: string;
+  redSocialUrl?: string;
   creadoEn: { seconds: number };
 }
 
@@ -120,6 +121,16 @@ function SolicitudCard({ s, onLightbox }: { s: Solicitud; onLightbox: (url: stri
         {s.estado === "publicado" && (
           <div className="space-y-2 pt-1">
             <p className="text-xs text-green-600 font-semibold">¡Tu promo fue publicada! 🎉</p>
+            {s.redSocialUrl && (
+              <a
+                href={s.redSocialUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-xs bg-gradient-to-r from-purple-600 to-pink-500 text-white px-3 py-2 rounded-lg font-medium w-fit"
+              >
+                📸 Ver en Instagram / TikTok
+              </a>
+            )}
             {s.disenoUrl && (
               <div className="flex gap-2">
                 <button
