@@ -137,10 +137,21 @@ export default function MarketingPage() {
   const compartirWa = async () => {
     if (!modalSolicitud || !urlPublicada) return;
     const sol = modalSolicitud;
+    const lineasProductos = sol.productos
+      .map((p: Producto & { precioOriginal?: number; precioOferta?: number }) => {
+        if (p.precioOferta && p.precioOriginal && p.precioOferta < p.precioOriginal)
+          return `• ${p.nombre} ~~S/${p.precioOriginal}~~ → *S/${p.precioOferta}*`;
+        return `• ${p.nombre}${p.precio > 0 ? ` — *S/${p.precio}*` : ""}`;
+      })
+      .join("\n");
     const texto = [
-      `📍 *Local ${sol.local} — ${sol.locatarioNombre}*`,
-      sol.productos.map((p) => `• ${p.nombre}${p.precio > 0 ? ` — S/${p.precio}` : ""}`).join("\n"),
-      sol.fechaInicio ? `📅 ${sol.fechaInicio} → ${sol.fechaFin}` : "",
+      `¡Hola! 👋 Esta semana *${sol.locatarioNombre}* (Local ${sol.local}) te trae:`,
+      "",
+      lineasProductos,
+      "",
+      sol.fechaInicio ? `📅 Oferta válida: ${sol.fechaInicio} → ${sol.fechaFin}` : "",
+      sol.nota ? `💬 ${sol.nota}` : "",
+      "¡Encuéntranos en el Mercado Sumaq! 🛒",
       redSocialUrl.trim(),
     ].filter(Boolean).join("\n");
 
@@ -207,6 +218,8 @@ export default function MarketingPage() {
   const pendientes = solicitudes.filter((s) => s.estado === "pendiente");
   const enDiseno = solicitudes.filter((s) => s.estado === "en_diseno");
   const solicitudModal = solicitudes.find((s) => s.id === modalId);
+  const [seccionesAbiertas, setSeccionesAbiertas] = useState<Record<string, boolean>>({ en_diseno: true, pendiente: true });
+  const toggleSeccion = (key: string) => setSeccionesAbiertas((prev) => ({ ...prev, [key]: !prev[key] }));
 
   return (
     <div className="p-4 md:p-8">
@@ -239,8 +252,23 @@ export default function MarketingPage() {
           <p className="font-medium">Todo al día — no hay solicitudes pendientes</p>
         </div>
       ) : (
-        <div className="space-y-3 max-w-3xl w-full">
-          {solicitudes.map((s) => {
+        <div className="space-y-4 max-w-3xl w-full">
+          {[
+            { key: "en_diseno", label: "En diseño", items: enDiseno, bg: "bg-blue-50", border: "border-blue-100", text: "text-blue-700" },
+            { key: "pendiente", label: "Pendientes", items: pendientes, bg: "bg-yellow-50", border: "border-yellow-100", text: "text-yellow-700" },
+          ].map(({ key, label, items, bg, border, text }) => items.length === 0 ? null : (
+            <div key={key}>
+              <button
+                onClick={() => toggleSeccion(key)}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl ${bg} border ${border} mb-2`}
+              >
+                <span className={`text-sm font-bold ${text} flex-1 text-left`}>{label}</span>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full bg-white/60 ${text}`}>{items.length}</span>
+                <span className={`text-xs ${text}`}>{seccionesAbiertas[key] ? "▲" : "▼"}</span>
+              </button>
+              {seccionesAbiertas[key] && (
+                <div className="space-y-3">
+          {items.map((s) => {
             const abierto = expandido === s.id;
             return (
               <div key={s.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -391,6 +419,10 @@ export default function MarketingPage() {
               </div>
             );
           })}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
 

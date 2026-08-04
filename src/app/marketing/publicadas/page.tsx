@@ -10,7 +10,7 @@ interface Solicitud {
   locatarioNombre: string;
   local: string;
   celular?: string;
-  productos: { nombre: string; precio: number }[];
+  productos: { nombre: string; precio: number; precioOriginal?: number; precioOferta?: number }[];
   semana: number;
   fechaInicio?: string;
   fechaFin?: string;
@@ -47,13 +47,19 @@ const WaIcon = () => (
 
 const buildMensaje = (s: Solicitud) => {
   const productos = s.productos
-    .map((p) => `• ${p.nombre}${p.precio > 0 ? ` — S/${p.precio}` : ""}`)
+    .map((p: { nombre: string; precio: number; precioOriginal?: number; precioOferta?: number }) => {
+      if (p.precioOferta && p.precioOriginal && p.precioOferta < p.precioOriginal)
+        return `• ${p.nombre} ~~S/${p.precioOriginal}~~ → *S/${p.precioOferta}*`;
+      return `• ${p.nombre}${p.precio > 0 ? ` — *S/${p.precio}*` : ""}`;
+    })
     .join("\n");
-  const fechas = s.fechaInicio ? `📅 ${s.fechaInicio} → ${s.fechaFin}` : "";
   return [
-    `📍 *Local ${s.local} — ${s.locatarioNombre}*`,
+    `¡Hola! 👋 Esta semana *${s.locatarioNombre}* (Local ${s.local}) te trae:`,
+    "",
     productos,
-    fechas,
+    "",
+    s.fechaInicio ? `📅 Oferta válida: ${s.fechaInicio} → ${s.fechaFin}` : "",
+    "¡Encuéntranos en el Mercado Sumaq! 🛒",
     s.redSocialUrl ?? "",
   ].filter(Boolean).join("\n");
 };

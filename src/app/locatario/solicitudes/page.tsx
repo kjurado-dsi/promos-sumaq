@@ -114,7 +114,7 @@ function SolicitudCard({ s, onLightbox }: { s: Solicitud; onLightbox: (url: stri
 
         {s.estado === "en_diseno" && (
           <p className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-            ✏️ Marketing ya tomó tu solicitud y está trabajando en el diseño. Si necesitas cambios urgentes, contáctanos directamente.
+            ✏️ Tu solicitud ya está en manos del equipo de diseño. Para cualquier consulta urgente, contáctanos directamente.
           </p>
         )}
 
@@ -212,6 +212,7 @@ export default function SolicitudesPage() {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState<{ url: string; nombre: string } | null>(null);
+  const [gruposAbiertos, setGruposAbiertos] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!user) return;
@@ -250,19 +251,25 @@ export default function SolicitudesPage() {
         {GRUPOS.map(({ estado, label, icon, bg, text, border }) => {
           const grupo = solicitudes.filter((s) => s.estado === estado);
           if (grupo.length === 0) return null;
+          const abierto = gruposAbiertos[estado] ?? false;
           return (
             <div key={estado}>
-              {/* Encabezado de grupo */}
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${bg} border ${border} mb-3`}>
+              <button
+                onClick={() => setGruposAbiertos((prev) => ({ ...prev, [estado]: !abierto }))}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl ${bg} border ${border} mb-2`}
+              >
                 <span className="text-base">{icon}</span>
-                <span className={`text-sm font-bold ${text}`}>{label}</span>
+                <span className={`text-sm font-bold ${text} flex-1 text-left`}>{label}</span>
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full bg-white/60 ${text}`}>{grupo.length}</span>
-              </div>
-              <div className="space-y-3 pl-1">
-                {grupo.map((s) => (
-                  <SolicitudCard key={s.id} s={s} onLightbox={(url, nombre) => setLightbox({ url, nombre })} />
-                ))}
-              </div>
+                <span className={`text-xs ${text}`}>{abierto ? "▲" : "▼"}</span>
+              </button>
+              {abierto && (
+                <div className="space-y-3 pl-1 mb-1">
+                  {grupo.map((s) => (
+                    <SolicitudCard key={s.id} s={s} onLightbox={(url, nombre) => setLightbox({ url, nombre })} />
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}

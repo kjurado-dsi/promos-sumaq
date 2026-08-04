@@ -23,6 +23,20 @@ interface Perfil {
 }
 
 const DRAFT_KEY = "solicitar_draft";
+const TOPE_SEMANAL = 10;
+
+// Solo lunes (1) y jueves (4)
+function esDiaHabil(): boolean {
+  const dia = new Date().getDay();
+  return dia === 1 || dia === 4;
+}
+
+function nombreDiaSiguiente(): string {
+  const dia = new Date().getDay();
+  if (dia < 1) return "el lunes";
+  if (dia < 4) return "el jueves";
+  return "el próximo lunes";
+}
 
 export default function SolicitarPage() {
   const { user } = useAuth();
@@ -32,14 +46,17 @@ export default function SolicitarPage() {
   const hoy = new Date().toISOString().split("T")[0];
   const en6dias = new Date(Date.now() + 6 * 86400000).toISOString().split("T")[0];
   const [seleccionados, setSeleccionados] = useState<string[]>([]);
-  const [precios, setPrecios] = useState<Record<string, string>>({});
+  const [precios, setPrecios] = useState<Record<string, { original: string; oferta: string }>>({});
   const [fechaInicio, setFechaInicio] = useState(hoy);
   const [fechaFin, setFechaFin] = useState(en6dias);
   const [nota, setNota] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [loadingProductos, setLoadingProductos] = useState(true);
+  const [topeAlcanzado, setTopeAlcanzado] = useState(false);
+  const [totalSemana, setTotalSemana] = useState(0);
 
-  // Restore draft from localStorage on mount
+  const diaHabil = esDiaHabil();
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
@@ -54,7 +71,6 @@ export default function SolicitarPage() {
     } catch { /* ignore */ }
   }, []);
 
-  // Save draft to localStorage on every change
   useEffect(() => {
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({ seleccionados, precios, nota, fechaInicio, fechaFin }));
@@ -84,12 +100,25 @@ export default function SolicitarPage() {
         });
       }
     });
+    // Verificar tope semanal
+    getDocs(query(collection(db, "solicitudes"), where("semana", "==", semanaActual))).then((snap) => {
+      const total = snap.size;
+      setTotalSemana(total);
+      setTopeAlcanzado(total >= TOPE_SEMANAL);
+    });
   }, [user]);
 
   const toggleProducto = (id: string) => {
     setSeleccionados((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : prev.length < 5 ? [...prev, id] : prev
     );
+  };
+
+  const setPrecio = (id: string, campo: "original" | "oferta", valor: string) => {
+    setPrecios((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], [campo]: valor },
+    }));
   };
 
   const enviar = async () => {
@@ -99,7 +128,9 @@ export default function SolicitarPage() {
       .filter((p) => seleccionados.includes(p.id))
       .map((p) => ({
         nombre: p.nombre,
-        precio: parseFloat(precios[p.id] ?? "0") || 0,
+        precio: parseFloat(precios[p.id]?.oferta ?? "0") || 0,
+        precioOriginal: parseFloat(precios[p.id]?.original ?? "0") || 0,
+        precioOferta: parseFloat(precios[p.id]?.oferta ?? "0") || 0,
         tipo: p.tipo,
         descripcion: p.descripcion ?? "",
         fotoUrl: p.fotoUrl ?? "",
@@ -124,12 +155,45 @@ export default function SolicitarPage() {
   };
 
   const perfilIncompleto = !perfil?.local || !perfil?.celular || !perfil?.nombreCompleto;
-  const canSubmit = !enviando && seleccionados.length > 0 && !perfilIncompleto;
+  const canSubmit = !enviando && seleccionados.length > 0 && !perfilIncompleto && !topeAlcanzado && diaHabil;
+
+  // Bloqueo: día no hábil
+  if (!diaHabil) {
+    return (
+      <div className="p-4 md:p-8 max-w-2xl">
+        <h1 className="text-2xl font-semibold text-gray-900 mb-1">Solicitar promo</h1>
+        <div className="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center space-y-3">
+          <p className="text-4xl">📅</p>
+          <p className="text-lg font-semibold text-amber-800">Hoy no es día de envío</p>
+          <p className="text-sm text-amber-700">
+            Las solicitudes se reciben <strong>los lunes y los jueves</strong>.<br />
+            Vuelve {nombreDiaSiguiente()} para enviar tu promo.
+          </p>
+          <p className="text-xs text-amber-500 mt-2">
+            Este horario nos ayuda a organizar mejor el trabajo de diseño para todos los locatarios.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-8 max-w-2xl">
       <h1 className="text-2xl font-semibold text-gray-900 mb-1">Solicitar promo</h1>
-      <p className="text-sm text-gray-500 mb-6">Semana {semanaActual} · Envía hasta el martes · Máximo 5 productos</p>
+      <p className="text-sm text-gray-500 mb-4">Semana {semanaActual} · Envíos: lunes y jueves · Máximo 5 productos</p>
+
+      {/* Tope semanal alcanzado */}
+      {topeAlcanzado && (
+        <div className="mb-5 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+          <p className="font-semibold">Cupo semanal completo</p>
+          <p className="text-xs mt-0.5">Ya se recibieron {totalSemana} solicitudes esta semana (máximo {TOPE_SEMANAL}). Podrás enviar la próxima semana.</p>
+        </div>
+      )}
+
+      {/* Aviso de promo relevante */}
+      <div className="mb-5 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-700">
+        💡 <strong>Tip:</strong> Incluye productos con una <strong>promoción real y llamativa</strong> — descuentos, combos o precios especiales de la semana. Las promos relevantes generan más visitas a tu local.
+      </div>
 
       {/* Resumen del perfil */}
       {perfil && (
@@ -199,16 +263,37 @@ export default function SolicitarPage() {
                   </button>
 
                   {sel && (
-                    <div className="px-4 pb-3 flex items-center gap-2">
-                      <span className="text-xs text-gray-500">Precio (S/)</span>
-                      <input
-                        type="number"
-                        placeholder="0.00"
-                        value={precios[p.id] ?? ""}
-                        onChange={(e) => setPrecios({ ...precios, [p.id]: e.target.value })}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-28 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+                    <div className="px-4 pb-3 space-y-2">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 flex-1">
+                          <span className="text-xs text-gray-400 w-20 shrink-0">Precio normal</span>
+                          <div className="flex items-center gap-1 flex-1">
+                            <span className="text-xs text-gray-400">S/</span>
+                            <input
+                              type="number"
+                              placeholder="0.00"
+                              value={precios[p.id]?.original ?? ""}
+                              onChange={(e) => setPrecio(p.id, "original", e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-1">
+                          <span className="text-xs text-red-500 font-medium w-20 shrink-0">Precio oferta</span>
+                          <div className="flex items-center gap-1 flex-1">
+                            <span className="text-xs text-gray-400">S/</span>
+                            <input
+                              type="number"
+                              placeholder="0.00"
+                              value={precios[p.id]?.oferta ?? ""}
+                              onChange={(e) => setPrecio(p.id, "oferta", e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex-1 border border-red-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 bg-red-50"
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
