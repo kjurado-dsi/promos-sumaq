@@ -54,7 +54,7 @@ const buildMensaje = (s: Solicitud) => {
     })
     .join("\n");
   return [
-    `¡Hola! 👋 Esta semana *${s.locatarioNombre}* (Local ${s.local}) te trae:`,
+    `¡Hola Casero! 👋 Esta semana *${s.locatarioNombre}* (Local ${s.local}) te trae:`,
     "",
     productos,
     "",

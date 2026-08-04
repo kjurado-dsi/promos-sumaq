@@ -145,7 +145,7 @@ export default function MarketingPage() {
       })
       .join("\n");
     const texto = [
-      `¡Hola! 👋 Esta semana *${sol.locatarioNombre}* (Local ${sol.local}) te trae:`,
+      `¡Hola Casero! 👋 Esta semana *${sol.locatarioNombre}* (Local ${sol.local}) te trae:`,
       "",
       lineasProductos,
       "",

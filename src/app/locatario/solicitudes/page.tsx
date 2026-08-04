@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import Lightbox from "@/components/Lightbox";
 import Link from "next/link";
 
-interface Producto { nombre: string; precio: number; }
+interface Producto { nombre: string; precio: number; precioOriginal?: number; precioOferta?: number; }
 
 interface Solicitud {
   id: string;
@@ -41,7 +41,9 @@ function SolicitudCard({ s, onLightbox }: { s: Solicitud; onLightbox: (url: stri
   const [editForm, setEditForm] = useState({ fechaInicio: s.fechaInicio ?? "", fechaFin: s.fechaFin ?? "", nota: s.nota ?? "", precios: Object.fromEntries(s.productos.map((p, i) => [i, String(p.precio)])) as Record<number, string> });
   const [guardando, setGuardando] = useState(false);
 
-  const fecha = s.creadoEn ? new Date(s.creadoEn.seconds * 1000).toLocaleDateString("es-PE", { day: "numeric", month: "short", year: "numeric" }) : "";
+  const fechaHora = s.creadoEn
+    ? new Date(s.creadoEn.seconds * 1000).toLocaleString("es-PE", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+    : "";
 
   const guardar = async () => {
     setGuardando(true);
@@ -83,14 +85,17 @@ function SolicitudCard({ s, onLightbox }: { s: Solicitud; onLightbox: (url: stri
         <div className="flex flex-wrap gap-1.5">
           {s.productos.map((p, i) => (
             <span key={i} className="bg-gray-50 border border-gray-200 text-gray-700 text-xs px-2.5 py-1 rounded-lg font-medium">
-              {p.nombre}{p.precio > 0 ? ` — S/${p.precio}` : ""}
+              {p.nombre}
+              {p.precioOferta && p.precioOriginal && p.precioOferta < p.precioOriginal
+                ? <> · <span className="line-through text-gray-400">S/{p.precioOriginal}</span> <span className="text-red-500 font-semibold">S/{p.precioOferta}</span></>
+                : p.precio > 0 ? ` — S/${p.precio}` : ""}
             </span>
           ))}
         </div>
 
         {/* Meta */}
         <div className="flex flex-col gap-0.5">
-          <p className="text-xs text-gray-500">Semana {s.semana} · Enviado el {fecha}</p>
+          <p className="text-xs text-gray-500">Semana {s.semana} · Enviado el {fechaHora}</p>
           {s.fechaInicio && (
             <p className="text-xs text-gray-500">📅 Vigencia: {s.fechaInicio} → {s.fechaFin}</p>
           )}
