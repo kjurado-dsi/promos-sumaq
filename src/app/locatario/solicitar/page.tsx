@@ -263,35 +263,35 @@ export default function SolicitarPage() {
                   </button>
 
                   {sel && (
-                    <div className="px-4 pb-3 space-y-2">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 flex-1">
-                          <span className="text-xs text-gray-400 w-20 shrink-0">Precio normal</span>
-                          <div className="flex items-center gap-1 flex-1">
-                            <span className="text-xs text-gray-400">S/</span>
-                            <input
-                              type="number"
-                              placeholder="0.00"
-                              value={precios[p.id]?.original ?? ""}
-                              onChange={(e) => setPrecio(p.id, "original", e.target.value)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
+                    <div className="px-4 pb-3 grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <span className="text-xs text-gray-400">Precio normal</span>
+                        <div className="flex items-center gap-1 border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
+                          <span className="text-xs text-gray-400">S/</span>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            placeholder="0.00"
+                            value={precios[p.id]?.original ?? ""}
+                            onChange={(e) => setPrecio(p.id, "original", e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex-1 min-w-0 text-sm focus:outline-none bg-transparent"
+                          />
                         </div>
-                        <div className="flex items-center gap-1.5 flex-1">
-                          <span className="text-xs text-red-500 font-medium w-20 shrink-0">Precio oferta</span>
-                          <div className="flex items-center gap-1 flex-1">
-                            <span className="text-xs text-gray-400">S/</span>
-                            <input
-                              type="number"
-                              placeholder="0.00"
-                              value={precios[p.id]?.oferta ?? ""}
-                              onChange={(e) => setPrecio(p.id, "oferta", e.target.value)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="flex-1 border border-red-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 bg-red-50"
-                            />
-                          </div>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-xs text-red-500 font-medium">Precio oferta</span>
+                        <div className="flex items-center gap-1 border border-red-200 rounded-lg px-2 py-1.5 bg-red-50">
+                          <span className="text-xs text-gray-400">S/</span>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            placeholder="0.00"
+                            value={precios[p.id]?.oferta ?? ""}
+                            onChange={(e) => setPrecio(p.id, "oferta", e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex-1 min-w-0 text-sm focus:outline-none bg-transparent"
+                          />
                         </div>
                       </div>
                     </div>

@@ -82,14 +82,19 @@ function SolicitudCard({ s, onLightbox }: { s: Solicitud; onLightbox: (url: stri
 
       <div className="p-4 space-y-3">
         {/* Productos */}
-        <div className="flex flex-wrap gap-1.5">
+        <div className="space-y-1.5">
           {s.productos.map((p, i) => (
-            <span key={i} className="bg-gray-50 border border-gray-200 text-gray-700 text-xs px-2.5 py-1 rounded-lg font-medium">
-              {p.nombre}
-              {p.precioOferta && p.precioOriginal && p.precioOferta < p.precioOriginal
-                ? <> · <span className="line-through text-gray-400">S/{p.precioOriginal}</span> <span className="text-red-500 font-semibold">S/{p.precioOferta}</span></>
-                : p.precio > 0 ? ` — S/${p.precio}` : ""}
-            </span>
+            <div key={i} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+              <span className="text-xs text-gray-700 font-medium">{p.nombre}</span>
+              {p.precioOferta && p.precioOriginal && p.precioOferta < p.precioOriginal ? (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-xs text-gray-400 line-through">S/{p.precioOriginal}</span>
+                  <span className="text-xs text-red-500 font-bold">S/{p.precioOferta}</span>
+                </div>
+              ) : p.precio > 0 ? (
+                <span className="text-xs text-gray-600 font-semibold shrink-0">S/{p.precio}</span>
+              ) : null}
+            </div>
           ))}
         </div>
 
