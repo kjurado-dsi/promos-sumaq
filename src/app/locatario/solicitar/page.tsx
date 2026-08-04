@@ -55,7 +55,7 @@ export default function SolicitarPage() {
   const [topeAlcanzado, setTopeAlcanzado] = useState(false);
   const [totalSemana, setTotalSemana] = useState(0);
 
-  const diaHabil = esDiaHabil();
+  const diaHabil = true; // Primera etapa: habilitado todos los días
 
   useEffect(() => {
     try {
