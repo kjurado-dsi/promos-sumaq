@@ -263,10 +263,10 @@ export default function SolicitarPage() {
                   </button>
 
                   {sel && (
-                    <div className="px-4 pb-3 grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <span className="text-xs text-gray-400">Precio normal</span>
-                        <div className="flex items-center gap-1 border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
+                    <div className="px-4 pb-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400 w-28 shrink-0">Precio normal</span>
+                        <div className="flex items-center gap-1 flex-1 border border-gray-300 rounded-lg px-3 py-2 bg-white">
                           <span className="text-xs text-gray-400">S/</span>
                           <input
                             type="number"
@@ -279,9 +279,9 @@ export default function SolicitarPage() {
                           />
                         </div>
                       </div>
-                      <div className="space-y-1">
-                        <span className="text-xs text-red-500 font-medium">Precio oferta</span>
-                        <div className="flex items-center gap-1 border border-red-200 rounded-lg px-2 py-1.5 bg-red-50">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-red-500 font-semibold w-28 shrink-0">Precio oferta</span>
+                        <div className="flex items-center gap-1 flex-1 border border-red-200 rounded-lg px-3 py-2 bg-red-50">
                           <span className="text-xs text-gray-400">S/</span>
                           <input
                             type="number"
