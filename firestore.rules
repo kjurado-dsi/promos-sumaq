@@ -1,0 +1,64 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── users ──────────────────────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ── allowed_roles ──────────────────────────────────────────────────────────
+    match /allowed_roles/{email} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // ── solicitudes ────────────────────────────────────────────────────────────
+    // Cualquier usuario autenticado puede leer, crear y actualizar solicitudes.
+    // La única restricción dura: no puedes crear con un uid que no sea el tuyo.
+    match /solicitudes/{solicitudId} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+
+    // ── productos ──────────────────────────────────────────────────────────────
+    match /productos/{productoId} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if request.auth != null;
+    }
+
+    // ── reportes ───────────────────────────────────────────────────────────────
+    match /reportes/{reporteId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // ── solicitudes_reportes ───────────────────────────────────────────────────
+    match /solicitudes_reportes/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // ── contratos ──────────────────────────────────────────────────────────────
+    match /contratos/{contratoId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // ── comunicados ────────────────────────────────────────────────────────────
+    match /comunicados/{comunicadoId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Bloquear acceso no autenticado a todo
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

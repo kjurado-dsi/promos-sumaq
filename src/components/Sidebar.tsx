@@ -23,6 +23,8 @@ const navByRole: Record<string, NavItem[]> = {
     { divider: true, label: "Soporte Operaciones" },
     { label: "Reportar", href: "/locatario/reportar", icon: "📝" },
     { label: "Mis reportes", href: "/locatario/reportes", icon: "📋" },
+    { label: "Mi contrato", href: "/locatario/mi-contrato", icon: "📄" },
+    { label: "Comunicados", href: "/locatario/comunicados", icon: "📢" },
     { divider: true, label: "Promociones" },
     { label: "Inicio", href: "/locatario", icon: "🏠" },
     { label: "Mi catálogo", href: "/locatario/catalogo", icon: "📦" },
@@ -42,6 +44,8 @@ const navByRole: Record<string, NavItem[]> = {
     { label: "Catálogos", href: "/admin/catalogos", icon: "📦" },
     { divider: true, label: "Soporte Operaciones" },
     { label: "Reportes", href: "/admin/reportes", icon: "🔔" },
+    { label: "Contratos", href: "/admin/contratos", icon: "📄" },
+    { label: "Comunicados", href: "/admin/comunicados", icon: "📢" },
   ],
 };
 
