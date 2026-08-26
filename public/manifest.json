@@ -1,12 +1,12 @@
 {
-  "name": "Promos Sumaq Mercados",
-  "short_name": "Sumaq Promos",
-  "description": "Plataforma de promociones para locatarios DS Inmobiliario",
+  "name": "Control Operativo - Locales Sumaq",
+  "short_name": "Sumaq Operativo",
+  "description": "Plataforma de gestión operativa para locatarios de Sumaq Mercados",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",
-  "theme_color": "#2563eb",
+  "theme_color": "#0d1f3c",
   "icons": [
     {
       "src": "https://lh3.googleusercontent.com/d/1W27Jd23pjCvkMfP7JA3Od0PcQ_1XzqPc",

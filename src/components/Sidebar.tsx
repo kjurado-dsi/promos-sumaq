@@ -25,11 +25,6 @@ const navByRole: Record<string, NavItem[]> = {
     { label: "Mis reportes", href: "/locatario/reportes", icon: "📋" },
     { label: "Mi contrato", href: "/locatario/mi-contrato", icon: "📄" },
     { label: "Comunicados", href: "/locatario/comunicados", icon: "📢" },
-    { divider: true, label: "Promociones" },
-    { label: "Inicio", href: "/locatario", icon: "🏠" },
-    { label: "Mi catálogo", href: "/locatario/catalogo", icon: "📦" },
-    { label: "Solicitar promo", href: "/locatario/solicitar", icon: "📤" },
-    { label: "Mis solicitudes", href: "/locatario/solicitudes", icon: "🕐" },
   ],
   marketing: [
     { label: "Panel", href: "/marketing/panel", icon: "📊" },

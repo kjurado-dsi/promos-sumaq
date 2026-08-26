@@ -10,14 +10,14 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Promos Sumaq Mercados",
-  description: "Plataforma de promociones para locatarios DS Inmobiliario",
+  title: "Control Operativo - Locales Sumaq",
+  description: "Plataforma de gestión operativa para locatarios de Sumaq Mercados",
   manifest: "/manifest.json",
-  themeColor: "#2563eb",
+  themeColor: "#0d1f3c",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Sumaq Promos",
+    title: "Sumaq Operativo",
   },
 };
 
@@ -33,7 +33,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#0d1f3c" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Sumaq Promos" />
+        <meta name="apple-mobile-web-app-title" content="Sumaq Operativo" />
         <link rel="icon" href="https://lh3.googleusercontent.com/d/1W27Jd23pjCvkMfP7JA3Od0PcQ_1XzqPc" />
         <link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/d/1W27Jd23pjCvkMfP7JA3Od0PcQ_1XzqPc" />
       </head>
