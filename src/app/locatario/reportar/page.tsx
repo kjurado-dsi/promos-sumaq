@@ -84,8 +84,43 @@ export default function ReportarPage() {
       fotoUrl,
       estado: "recibido",
       comentarioAdmin: "",
+      historial: [],
       creadoEn: new Date(),
     });
+
+    // Notificar al admin por email
+    const tipoLabel: Record<string, string> = {
+      incidente: "🚨 Incidente", mantenimiento: "🔧 Mantenimiento",
+      solicitud: "📋 Solicitud", sugerencia: "💡 Sugerencia",
+    };
+    fetch("/api/send-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: "kaeloful@gmail.com",
+        subject: `${urgente ? "🚨 URGENTE — " : ""}Nuevo reporte: ${perfil.nombreCompleto} (Local ${perfil.local})`,
+        html: `
+          <div style="font-family:sans-serif;max-width:520px;margin:0 auto">
+            <h2 style="color:#0d1f3c;margin-bottom:4px">Nuevo reporte recibido</h2>
+            <p style="color:#6b7280;font-size:14px;margin-bottom:16px">Sumaq Operativo · ${new Date().toLocaleString("es-PE")}</p>
+            ${urgente ? '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-bottom:16px;color:#b91c1c;font-weight:600">⚠️ MARCADO COMO URGENTE</div>' : ""}
+            <table style="width:100%;border-collapse:collapse;font-size:14px">
+              <tr><td style="padding:8px 0;color:#6b7280;width:120px">Locatario</td><td style="padding:8px 0;font-weight:600;color:#111">${perfil.nombreCompleto}</td></tr>
+              <tr><td style="padding:8px 0;color:#6b7280">Local</td><td style="padding:8px 0;color:#111">${perfil.local}</td></tr>
+              <tr><td style="padding:8px 0;color:#6b7280">Tipo</td><td style="padding:8px 0;color:#111">${tipoLabel[tipo] ?? tipo}</td></tr>
+              <tr><td style="padding:8px 0;color:#6b7280">Área</td><td style="padding:8px 0;color:#111">${area}</td></tr>
+              <tr><td style="padding:8px 0;color:#6b7280;vertical-align:top">Descripción</td><td style="padding:8px 0;color:#111">${descripcion.trim()}</td></tr>
+              ${fotoUrl ? `<tr><td style="padding:8px 0;color:#6b7280">Foto</td><td style="padding:8px 0"><a href="${fotoUrl}" style="color:#2563eb">Ver foto adjunta</a></td></tr>` : ""}
+            </table>
+            <div style="margin-top:20px">
+              <a href="https://operaciones-sumaq-five.vercel.app/admin/reportes" style="background:#0d1f3c;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600">
+                Ver en el panel →
+              </a>
+            </div>
+          </div>
+        `,
+      }),
+    }).catch(() => {}); // no bloquea el flujo si falla
 
     router.push("/locatario/reportes?nuevo=1");
   };

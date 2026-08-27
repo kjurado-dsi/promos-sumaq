@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc, arrayUnion, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+
+interface HistorialItem {
+  accion: string;
+  por: string;
+  en: { seconds: number };
+}
 
 interface Reporte {
   id: string;
@@ -16,6 +22,7 @@ interface Reporte {
   estado: string;
   fotoUrl?: string;
   comentarioAdmin?: string;
+  historial?: HistorialItem[];
   creadoEn: { seconds: number };
 }
 
@@ -73,8 +80,9 @@ export default function ReportesAdminPage() {
   };
 
   const cambiarEstado = async (id: string, estado: string) => {
-    await updateDoc(doc(db, "reportes", id), { estado });
-    setDetalle((d) => d && d.id === id ? { ...d, estado } : d);
+    const entrada: HistorialItem = { accion: `Estado → ${ESTADO_LABEL[estado] ?? estado}`, por: "Operaciones", en: Timestamp.now() as unknown as { seconds: number } };
+    await updateDoc(doc(db, "reportes", id), { estado, historial: arrayUnion(entrada) });
+    setDetalle((d) => d && d.id === id ? { ...d, estado, historial: [...(d.historial ?? []), entrada] } : d);
 
     // Enviar push notification al locatario
     if (!detalle) return;
@@ -99,8 +107,9 @@ export default function ReportesAdminPage() {
   const guardarComentario = async () => {
     if (!detalle) return;
     setGuardando(true);
-    await updateDoc(doc(db, "reportes", detalle.id), { comentarioAdmin: comentario });
-    setDetalle({ ...detalle, comentarioAdmin: comentario });
+    const entrada: HistorialItem = { accion: "Respuesta enviada al locatario", por: "Operaciones", en: Timestamp.now() as unknown as { seconds: number } };
+    await updateDoc(doc(db, "reportes", detalle.id), { comentarioAdmin: comentario, historial: arrayUnion(entrada) });
+    setDetalle({ ...detalle, comentarioAdmin: comentario, historial: [...(detalle.historial ?? []), entrada] });
 
     // Notificar al locatario que hay una respuesta nueva
     try {
@@ -337,6 +346,31 @@ export default function ReportesAdminPage() {
                   {guardando ? "Guardando..." : "Guardar respuesta"}
                 </button>
               </div>
+
+              {/* Historial de trazabilidad */}
+              {detalle.historial && detalle.historial.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Historial</p>
+                  <div className="space-y-1.5">
+                    {[...detalle.historial].reverse().map((h, i) => (
+                      <div key={i} className="flex items-start gap-2 text-xs text-gray-500">
+                        <span className="mt-0.5 text-gray-300">•</span>
+                        <span className="flex-1">{h.accion}</span>
+                        <span className="text-gray-300 flex-shrink-0">
+                          {new Date(h.en.seconds * 1000).toLocaleDateString("es-PE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex items-start gap-2 text-xs text-gray-400">
+                      <span className="mt-0.5 text-gray-200">•</span>
+                      <span className="flex-1">Reporte creado</span>
+                      <span className="text-gray-300 flex-shrink-0">
+                        {new Date(detalle.creadoEn.seconds * 1000).toLocaleDateString("es-PE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
