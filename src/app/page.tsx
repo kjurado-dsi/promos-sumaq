@@ -54,7 +54,7 @@ export default function Home() {
             />
 
             <div className="text-center">
-              <p className="text-sm text-gray-500">Plataforma de promociones</p>
+              <p className="text-sm text-gray-500">Control operativo de locales</p>
             </div>
 
             <button

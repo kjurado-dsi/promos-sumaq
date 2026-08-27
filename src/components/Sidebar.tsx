@@ -23,7 +23,6 @@ const navByRole: Record<string, NavItem[]> = {
     { divider: true, label: "Soporte Operaciones" },
     { label: "Reportar", href: "/locatario/reportar", icon: "📝" },
     { label: "Mis reportes", href: "/locatario/reportes", icon: "📋" },
-    { label: "Mi contrato", href: "/locatario/mi-contrato", icon: "📄" },
     { label: "Comunicados", href: "/locatario/comunicados", icon: "📢" },
   ],
   marketing: [
