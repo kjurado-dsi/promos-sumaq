@@ -101,6 +101,25 @@ export default function ReportesAdminPage() {
     setGuardando(true);
     await updateDoc(doc(db, "reportes", detalle.id), { comentarioAdmin: comentario });
     setDetalle({ ...detalle, comentarioAdmin: comentario });
+
+    // Notificar al locatario que hay una respuesta nueva
+    try {
+      const userSnap = await getDoc(doc(db, "users", detalle.uid));
+      const fcmToken = userSnap.data()?.fcmToken;
+      if (fcmToken) {
+        await fetch("/api/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token: fcmToken,
+            title: "Nueva respuesta a tu reporte",
+            body: `Operaciones respondió: "${comentario.slice(0, 60)}..."`,
+            data: { reporteId: detalle.id },
+          }),
+        });
+      }
+    } catch { /* notificación opcional */ }
+
     setGuardando(false);
   };
 
@@ -201,12 +220,21 @@ export default function ReportesAdminPage() {
                     {r.urgente && <span className="text-xs font-bold text-red-500">URGENTE</span>}
                   </div>
                   <p className="text-xs text-gray-500 truncate">{r.descripcion}</p>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${tipo.bg} ${tipo.text}`}>{tipo.label}</span>
                     <span className="text-xs text-gray-300">·</span>
                     <span className="text-xs text-gray-400">{r.area}</span>
                     <span className="text-xs text-gray-300">·</span>
                     <span className="text-xs text-gray-400">{fecha}</span>
+                    {r.estado !== "resuelto" && (() => {
+                      const dias = Math.floor((Date.now() / 1000 - r.creadoEn.seconds) / 86400);
+                      if (dias < 1) return null;
+                      return (
+                        <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${dias >= 3 ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"}`}>
+                          {dias}d sin resolver
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${estado.bg} ${estado.text}`}>

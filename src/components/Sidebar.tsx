@@ -9,6 +9,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 type NavItem =
   | { divider: true; label: string; href?: undefined; icon?: undefined }
@@ -51,6 +53,14 @@ export default function Sidebar() {
   const items = navByRole[role ?? "locatario"] ?? [];
   const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
   const [installed, setInstalled] = useState(false);
+  const [reportesSinAtender, setReportesSinAtender] = useState(0);
+
+  useEffect(() => {
+    if (role !== "admin") return;
+    const q = query(collection(db, "reportes"), where("estado", "==", "recibido"));
+    const unsub = onSnapshot(q, (snap) => setReportesSinAtender(snap.size));
+    return () => unsub();
+  }, [role]);
 
   useEffect(() => {
     const handler = (e: Event) => { e.preventDefault(); setInstallPrompt(e); };
@@ -99,7 +109,12 @@ export default function Sidebar() {
               }`}
             >
               <span className="text-base">{item.icon}</span>
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.href === "/admin/reportes" && reportesSinAtender > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-tight">
+                  {reportesSinAtender}
+                </span>
+              )}
             </Link>
           );
         })}
