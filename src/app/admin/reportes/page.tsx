@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, orderBy, doc, updateDoc } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface Reporte {
   id: string;
+  uid: string;
   locatarioNombre: string;
   local: string;
   tipo: string;
@@ -65,9 +66,34 @@ export default function ReportesAdminPage() {
     resuelto: reportes.filter((r) => r.estado === "resuelto").length,
   };
 
+  const ESTADO_LABEL: Record<string, string> = {
+    en_proceso: "En proceso",
+    resuelto: "Resuelto ✓",
+    recibido: "Recibido",
+  };
+
   const cambiarEstado = async (id: string, estado: string) => {
     await updateDoc(doc(db, "reportes", id), { estado });
     setDetalle((d) => d && d.id === id ? { ...d, estado } : d);
+
+    // Enviar push notification al locatario
+    if (!detalle) return;
+    try {
+      const userSnap = await getDoc(doc(db, "users", detalle.uid));
+      const fcmToken = userSnap.data()?.fcmToken;
+      if (fcmToken) {
+        await fetch("/api/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token: fcmToken,
+            title: "Actualización de tu reporte",
+            body: `Tu reporte "${detalle.descripcion.slice(0, 50)}..." cambió a: ${ESTADO_LABEL[estado] ?? estado}`,
+            data: { reporteId: id },
+          }),
+        });
+      }
+    } catch { /* notificación opcional, no bloquea */ }
   };
 
   const guardarComentario = async () => {

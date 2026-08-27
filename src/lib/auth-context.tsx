@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { User, onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db, googleProvider } from "./firebase";
+import { registrarTokenFCM } from "./fcm";
 
 type Role = "locatario" | "marketing" | "admin" | null;
 
@@ -57,6 +58,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setRole(assignedRole);
           originalRoleRef.current = assignedRole;
         }
+        // Registrar token FCM para push notifications
+        registrarTokenFCM(u.uid);
       } else {
         setRole(null);
         originalRoleRef.current = null;
