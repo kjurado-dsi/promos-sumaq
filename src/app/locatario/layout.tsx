@@ -1,13 +1,17 @@
 "use client";
 
 import { useAuth } from "@/lib/auth-context";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import Sidebar from "@/components/Sidebar";
 
 export default function LocatarioLayout({ children }: { children: React.ReactNode }) {
   const { user, role, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const [perfilChecked, setPerfilChecked] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || (role && role !== "locatario"))) {
@@ -15,7 +19,21 @@ export default function LocatarioLayout({ children }: { children: React.ReactNod
     }
   }, [user, role, loading, router]);
 
-  if (loading) {
+  useEffect(() => {
+    if (loading || !user || pathname === "/locatario/perfil") {
+      setPerfilChecked(true);
+      return;
+    }
+    getDoc(doc(db, "users", user.uid)).then((snap) => {
+      const d = snap.data();
+      if (!d?.local || !d?.celular || !d?.nombreCompleto) {
+        router.replace("/locatario/perfil");
+      }
+      setPerfilChecked(true);
+    });
+  }, [user, loading, pathname, router]);
+
+  if (loading || !perfilChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />

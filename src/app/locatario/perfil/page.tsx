@@ -78,6 +78,7 @@ export default function PerfilPage() {
     };
     await updateDoc(doc(db, "users", user.uid), {
       nombreCompleto: form.nombreCompleto,
+      name: form.nombreCompleto,
       celular: form.celular,
       local: form.local,
       ...(logoUrl !== undefined && { logoUrl }),
@@ -111,8 +112,14 @@ export default function PerfilPage() {
           </button>
         )}
       </div>
+      {editing && !perfil.local && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
+          <p className="text-sm font-semibold text-amber-800">¡Bienvenido/a a Sumaq Operativo!</p>
+          <p className="text-xs text-amber-700 mt-0.5">Completa tus datos para continuar. Solo toma un momento.</p>
+        </div>
+      )}
       <p className="text-sm text-gray-500 mb-6">
-        Estos datos se incluyen automáticamente en cada solicitud de promo
+        Tus datos de contacto y número de local
       </p>
 
       <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
