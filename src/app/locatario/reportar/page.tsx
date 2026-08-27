@@ -97,7 +97,7 @@ export default function ReportarPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        to: "kaeloful@gmail.com",
+        to: process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "kjurado@ds-inmobiliario.com",
         subject: `${urgente ? "🚨 URGENTE — " : ""}Nuevo reporte: ${perfil.nombreCompleto} (Local ${perfil.local})`,
         html: `
           <div style="font-family:sans-serif;max-width:520px;margin:0 auto">

@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Sumaq Operativo <operaciones@sumaqmercados.pe>",
+        from: "Sumaq Operativo <operaciones@ds-inmobiliario.com>",
         to: Array.isArray(to) ? to : [to],
         subject,
         html,
