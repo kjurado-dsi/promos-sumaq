@@ -103,14 +103,24 @@ export default function PerfilPage() {
     <div className="p-4 md:p-8 max-w-lg">
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-2xl font-semibold text-gray-900">Mi perfil</h1>
-        {!editing && (
-          <button
-            onClick={() => setEditing(true)}
-            className="text-sm text-blue-600 hover:underline font-medium"
-          >
-            Editar perfil
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {!editing && (
+            <button
+              onClick={() => setEditing(true)}
+              className="text-sm text-blue-600 hover:underline font-medium"
+            >
+              Editar
+            </button>
+          )}
+          {!editing && perfil.local && (
+            <a
+              href="/locatario/reportar"
+              className="flex items-center gap-1.5 bg-[#0d1f3c] text-white text-sm font-semibold px-3 py-1.5 rounded-xl hover:bg-[#1a3358] transition-colors"
+            >
+              <span className="text-base leading-none">+</span> Reporte
+            </a>
+          )}
+        </div>
       </div>
       {editing && !perfil.local && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">

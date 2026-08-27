@@ -14,6 +14,8 @@ interface Usuario {
   role: string;
   local?: string;
   photo?: string;
+  celular?: string;
+  nombreCompleto?: string;
   createdAt?: { seconds: number };
 }
 
@@ -38,6 +40,9 @@ export default function LocatariosPage() {
   const [nuevoEmail, setNuevoEmail] = useState("");
   const [nuevoRol, setNuevoRol] = useState("marketing");
   const [agregando, setAgregando] = useState(false);
+  const [editando, setEditando] = useState<Usuario | null>(null);
+  const [editForm, setEditForm] = useState({ nombreCompleto: "", local: "", celular: "" });
+  const [guardandoEdit, setGuardandoEdit] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
@@ -69,6 +74,28 @@ export default function LocatariosPage() {
 
   const eliminarEmail = async (email: string) => {
     await deleteDoc(doc(db, "allowed_roles", email));
+  };
+
+  const abrirEdicion = (u: Usuario) => {
+    setEditando(u);
+    setEditForm({
+      nombreCompleto: u.nombreCompleto ?? u.name ?? "",
+      local: u.local ?? "",
+      celular: u.celular ?? "",
+    });
+  };
+
+  const guardarEdicion = async () => {
+    if (!editando) return;
+    setGuardandoEdit(true);
+    await updateDoc(doc(db, "users", editando.id), {
+      nombreCompleto: editForm.nombreCompleto,
+      name: editForm.nombreCompleto,
+      local: editForm.local,
+      celular: editForm.celular,
+    });
+    setEditando(null);
+    setGuardandoEdit(false);
   };
 
   const usuariosFiltrados = usuarios.filter((u) =>
@@ -183,7 +210,14 @@ export default function LocatariosPage() {
                     </div>
                     <p className="text-xs text-gray-400">{u.email} · Ingresó {fecha}</p>
                   </div>
-                  <div className="flex gap-1 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => abrirEdicion(u)}
+                      className="text-xs px-2 py-1 rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors"
+                      title="Editar datos"
+                    >
+                      ✏️
+                    </button>
                     {ROLES.map((r) => (
                       <button
                         key={r}
@@ -204,6 +238,64 @@ export default function LocatariosPage() {
           </div>
         )}
       </div>
+      {/* Modal edición de usuario */}
+      {editando && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 sm:p-4" onClick={() => setEditando(null)}>
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="font-semibold text-gray-900">{editando.name}</p>
+                <p className="text-xs text-gray-400">{editando.email}</p>
+              </div>
+              <button onClick={() => setEditando(null)} className="text-gray-400 hover:text-gray-600 text-xl p-1">✕</button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Nombre completo</label>
+                <input
+                  value={editForm.nombreCompleto}
+                  onChange={(e) => setEditForm({ ...editForm, nombreCompleto: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d1f3c]"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Número de local</label>
+                  <input
+                    placeholder="Ej: 14"
+                    value={editForm.local}
+                    onChange={(e) => setEditForm({ ...editForm, local: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d1f3c]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Celular</label>
+                  <input
+                    placeholder="999 888 777"
+                    value={editForm.celular}
+                    onChange={(e) => setEditForm({ ...editForm, celular: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d1f3c]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={guardarEdicion}
+                disabled={guardandoEdit || !editForm.nombreCompleto}
+                className="flex-1 bg-[#0d1f3c] text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-[#1a3358] disabled:opacity-40 transition-colors"
+              >
+                {guardandoEdit ? "Guardando..." : "Guardar cambios"}
+              </button>
+              <button onClick={() => setEditando(null)} className="px-4 border border-gray-300 text-gray-600 text-sm rounded-xl hover:bg-gray-50 transition-colors">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
