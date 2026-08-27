@@ -12,6 +12,8 @@ interface Usuario {
   name: string;
   email: string;
   role: string;
+  local?: string;
+  photo?: string;
   createdAt?: { seconds: number };
 }
 
@@ -165,11 +167,20 @@ export default function LocatariosPage() {
                 : "—";
               return (
                 <div key={u.id} className="flex items-center gap-4 px-5 py-3 hover:bg-gray-50">
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-medium text-gray-600 flex-shrink-0">
-                    {u.name?.[0] ?? "?"}
+                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-medium text-gray-600 flex-shrink-0 overflow-hidden">
+                    {u.photo
+                      ? <img src={u.photo} alt={u.name} className="w-full h-full object-cover" />
+                      : (u.name?.[0] ?? "?")}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{u.name ?? "Sin nombre"}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-gray-900">{u.name ?? "Sin nombre"}</p>
+                      {u.local && (
+                        <span className="text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
+                          Local {u.local}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-gray-400">{u.email} · Ingresó {fecha}</p>
                   </div>
                   <div className="flex gap-1 shrink-0">
