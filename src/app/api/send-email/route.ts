@@ -1,33 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Mientras el dominio no esté verificado en Resend, usamos onboarding@resend.dev
+// Una vez verificado ds-inmobiliario.com, cambiar a: operaciones@ds-inmobiliario.com
+const FROM = "Sumaq Operativo <onboarding@resend.dev>";
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey || apiKey.startsWith("re_XXX")) {
+  if (!process.env.RESEND_API_KEY) {
     return NextResponse.json({ ok: false, error: "RESEND_API_KEY no configurada" }, { status: 503 });
   }
 
   try {
-    const body = await req.json();
-    const { to, subject, html } = body;
+    const { to, subject, html } = await req.json();
 
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "Sumaq Operativo <operaciones@ds-inmobiliario.com>",
-        to: Array.isArray(to) ? to : [to],
-        subject,
-        html,
-      }),
+    const { error } = await resend.emails.send({
+      from: FROM,
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      html,
     });
 
-    if (!res.ok) {
-      const err = await res.text();
-      return NextResponse.json({ ok: false, error: err }, { status: 500 });
-    }
+    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
 
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
