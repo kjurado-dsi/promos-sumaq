@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc, arrayUnion, Timestamp } from "firebase/firestore";
+import {
+  collection, onSnapshot, query, orderBy,
+  doc, updateDoc, getDoc, arrayUnion, Timestamp,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface HistorialItem {
@@ -26,27 +29,35 @@ interface Reporte {
   creadoEn: { seconds: number };
 }
 
-const TIPO_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  incidente:    { label: "🚨 Incidente",    bg: "bg-red-50",    text: "text-red-700" },
-  mantenimiento:{ label: "🔧 Mantenimiento",bg: "bg-orange-50", text: "text-orange-700" },
-  solicitud:    { label: "📋 Solicitud",    bg: "bg-blue-50",   text: "text-blue-700" },
-  sugerencia:   { label: "💡 Sugerencia",   bg: "bg-yellow-50", text: "text-yellow-700" },
+const TIPO_CONFIG: Record<string, { label: string; icon: string; bg: string; text: string }> = {
+  incidente:     { label: "Incidente",     icon: "🚨", bg: "bg-red-50",    text: "text-red-700" },
+  mantenimiento: { label: "Mantenimiento", icon: "🔧", bg: "bg-orange-50", text: "text-orange-700" },
+  solicitud:     { label: "Solicitud",     icon: "📋", bg: "bg-blue-50",   text: "text-blue-700" },
+  sugerencia:    { label: "Sugerencia",    icon: "💡", bg: "bg-yellow-50", text: "text-yellow-700" },
 };
 
-const ESTADO_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  recibido:   { label: "Recibido",    bg: "bg-gray-100",   text: "text-gray-600" },
-  en_proceso: { label: "En proceso",  bg: "bg-amber-50",   text: "text-amber-700" },
-  resuelto:   { label: "Resuelto ✓", bg: "bg-green-50",   text: "text-green-700" },
+const ESTADO_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string; next?: string }> = {
+  recibido:   { label: "Recibido",    dot: "bg-gray-400",  bg: "bg-gray-100",  text: "text-gray-700",  next: "en_proceso" },
+  en_proceso: { label: "En proceso",  dot: "bg-amber-400", bg: "bg-amber-50",  text: "text-amber-700", next: "resuelto" },
+  resuelto:   { label: "Resuelto",    dot: "bg-green-500", bg: "bg-green-50",  text: "text-green-700" },
 };
 
-const FILTROS_TIPO = ["todos", "incidente", "mantenimiento", "solicitud", "sugerencia"];
-const FILTROS_ESTADO = ["todos", "recibido", "en_proceso", "resuelto"];
+const DIAS_LABEL = (dias: number, estado: string) => {
+  if (estado === "resuelto" || dias < 1) return null;
+  if (dias >= 5) return { text: `${dias}d`, cls: "bg-red-100 text-red-700 font-bold" };
+  if (dias >= 2) return { text: `${dias}d`, cls: "bg-amber-100 text-amber-700 font-semibold" };
+  return { text: `${dias}d`, cls: "bg-gray-100 text-gray-500" };
+};
+
+const ESTADO_LABEL: Record<string, string> = {
+  en_proceso: "En proceso", resuelto: "Resuelto", recibido: "Recibido",
+};
 
 export default function ReportesAdminPage() {
   const [reportes, setReportes] = useState<Reporte[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filtroEstado, setFiltroEstado] = useState<"todos" | "recibido" | "en_proceso" | "resuelto">("todos");
   const [filtroTipo, setFiltroTipo] = useState("todos");
-  const [filtroEstado, setFiltroEstado] = useState("todos");
   const [detalle, setDetalle] = useState<Reporte | null>(null);
   const [comentario, setComentario] = useState("");
   const [guardando, setGuardando] = useState(false);
@@ -60,34 +71,41 @@ export default function ReportesAdminPage() {
     return () => unsub();
   }, []);
 
-  const filtrados = reportes.filter((r) => {
-    if (filtroTipo !== "todos" && r.tipo !== filtroTipo) return false;
-    if (filtroEstado !== "todos" && r.estado !== filtroEstado) return false;
-    return true;
-  });
-
   const stats = {
-    total: reportes.length,
-    recibido: reportes.filter((r) => r.estado === "recibido").length,
+    todos:      reportes.length,
+    recibido:   reportes.filter((r) => r.estado === "recibido").length,
     en_proceso: reportes.filter((r) => r.estado === "en_proceso").length,
-    resuelto: reportes.filter((r) => r.estado === "resuelto").length,
+    resuelto:   reportes.filter((r) => r.estado === "resuelto").length,
   };
 
-  const ESTADO_LABEL: Record<string, string> = {
-    en_proceso: "En proceso",
-    resuelto: "Resuelto ✓",
-    recibido: "Recibido",
-  };
+  const urgentes = reportes.filter((r) => r.urgente && r.estado !== "resuelto").length;
 
-  const cambiarEstado = async (id: string, estado: string) => {
-    const entrada: HistorialItem = { accion: `Estado → ${ESTADO_LABEL[estado] ?? estado}`, por: "Operaciones", en: Timestamp.now() as unknown as { seconds: number } };
-    await updateDoc(doc(db, "reportes", id), { estado, historial: arrayUnion(entrada) });
-    setDetalle((d) => d && d.id === id ? { ...d, estado, historial: [...(d.historial ?? []), entrada] } : d);
+  const filtrados = reportes
+    .filter((r) => {
+      if (filtroEstado !== "todos" && r.estado !== filtroEstado) return false;
+      if (filtroTipo !== "todos" && r.tipo !== filtroTipo) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      // urgentes sin resolver primero, luego por días sin resolver desc
+      const aUrg = a.urgente && a.estado !== "resuelto" ? 1 : 0;
+      const bUrg = b.urgente && b.estado !== "resuelto" ? 1 : 0;
+      if (aUrg !== bUrg) return bUrg - aUrg;
+      return b.creadoEn.seconds - a.creadoEn.seconds;
+    });
 
-    // Enviar push notification al locatario
-    if (!detalle) return;
+  const cambiarEstado = async (r: Reporte, estado: string) => {
+    const entrada: HistorialItem = {
+      accion: `Estado → ${ESTADO_LABEL[estado] ?? estado}`,
+      por: "Operaciones",
+      en: Timestamp.now() as unknown as { seconds: number },
+    };
+    await updateDoc(doc(db, "reportes", r.id), { estado, historial: arrayUnion(entrada) });
+    if (detalle?.id === r.id) {
+      setDetalle((d) => d ? { ...d, estado, historial: [...(d.historial ?? []), entrada] } : d);
+    }
     try {
-      const userSnap = await getDoc(doc(db, "users", detalle.uid));
+      const userSnap = await getDoc(doc(db, "users", r.uid));
       const fcmToken = userSnap.data()?.fcmToken;
       if (fcmToken) {
         await fetch("/api/notify", {
@@ -96,22 +114,27 @@ export default function ReportesAdminPage() {
           body: JSON.stringify({
             token: fcmToken,
             title: "Actualización de tu reporte",
-            body: `Tu reporte "${detalle.descripcion.slice(0, 50)}..." cambió a: ${ESTADO_LABEL[estado] ?? estado}`,
-            data: { reporteId: id },
+            body: `Tu reporte cambió a: ${ESTADO_LABEL[estado] ?? estado}`,
+            data: { reporteId: r.id },
           }),
         });
       }
-    } catch { /* notificación opcional, no bloquea */ }
+    } catch { /* opcional */ }
   };
 
   const guardarComentario = async () => {
     if (!detalle) return;
     setGuardando(true);
-    const entrada: HistorialItem = { accion: "Respuesta enviada al locatario", por: "Operaciones", en: Timestamp.now() as unknown as { seconds: number } };
-    await updateDoc(doc(db, "reportes", detalle.id), { comentarioAdmin: comentario, historial: arrayUnion(entrada) });
+    const entrada: HistorialItem = {
+      accion: "Respuesta enviada al locatario",
+      por: "Operaciones",
+      en: Timestamp.now() as unknown as { seconds: number },
+    };
+    await updateDoc(doc(db, "reportes", detalle.id), {
+      comentarioAdmin: comentario,
+      historial: arrayUnion(entrada),
+    });
     setDetalle({ ...detalle, comentarioAdmin: comentario, historial: [...(detalle.historial ?? []), entrada] });
-
-    // Notificar al locatario que hay una respuesta nueva
     try {
       const userSnap = await getDoc(doc(db, "users", detalle.uid));
       const fcmToken = userSnap.data()?.fcmToken;
@@ -127,74 +150,80 @@ export default function ReportesAdminPage() {
           }),
         });
       }
-    } catch { /* notificación opcional */ }
-
+    } catch { /* opcional */ }
     setGuardando(false);
   };
 
-  const abrirDetalle = (r: Reporte) => {
-    setDetalle(r);
-    setComentario(r.comentarioAdmin ?? "");
-  };
+  const abrirDetalle = (r: Reporte) => { setDetalle(r); setComentario(r.comentarioAdmin ?? ""); };
 
-  const formatFecha = (seconds: number) =>
-    new Date(seconds * 1000).toLocaleDateString("es-PE", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const formatFecha = (s: number) =>
+    new Date(s * 1000).toLocaleDateString("es-PE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
+  const diasDesde = (s: number) => Math.floor((Date.now() / 1000 - s) / 86400);
 
   return (
-    <div className="p-4 md:p-8">
-      <h1 className="text-2xl font-semibold text-gray-900 mb-1">Reportes</h1>
-      <p className="text-sm text-gray-500 mb-6">Gestión de comunicaciones de locatarios</p>
+    <div className="p-4 md:p-6 max-w-5xl">
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        {[
-          { label: "Total", value: stats.total, color: "text-gray-900" },
-          { label: "Sin atender", value: stats.recibido, color: "text-red-600" },
-          { label: "En proceso", value: stats.en_proceso, color: "text-amber-600" },
-          { label: "Resueltos", value: stats.resuelto, color: "text-green-600" },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="bg-white border border-gray-200 rounded-xl p-4">
-            <p className={`text-3xl font-bold ${color} font-variant-numeric tabular-nums`}>{value}</p>
-            <p className="text-xs text-gray-400 uppercase tracking-wide mt-1">{label}</p>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Reportes operacionales</h1>
+          <p className="text-sm text-gray-400 mt-0.5">
+            {stats.recibido > 0
+              ? `${stats.recibido} sin atender${urgentes > 0 ? ` · ${urgentes} urgente${urgentes > 1 ? "s" : ""}` : ""}`
+              : "Todo atendido"}
+          </p>
+        </div>
+        {urgentes > 0 && (
+          <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-xs font-bold px-3 py-2 rounded-xl">
+            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            {urgentes} urgente{urgentes > 1 ? "s" : ""}
           </div>
+        )}
+      </div>
+
+      {/* Stats rápidas + filtro estado en una sola barra */}
+      <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-xl overflow-x-auto">
+        {([
+          { key: "todos",      label: "Todos",       count: stats.todos,      color: "text-gray-700" },
+          { key: "recibido",   label: "Sin atender", count: stats.recibido,   color: "text-red-600" },
+          { key: "en_proceso", label: "En proceso",  count: stats.en_proceso, color: "text-amber-600" },
+          { key: "resuelto",   label: "Resueltos",   count: stats.resuelto,   color: "text-green-600" },
+        ] as const).map(({ key, label, count, color }) => (
+          <button
+            key={key}
+            onClick={() => setFiltroEstado(key)}
+            className={`flex-1 flex flex-col items-center py-2.5 px-3 rounded-lg text-center transition-all min-w-[80px] ${
+              filtroEstado === key
+                ? "bg-white shadow-sm"
+                : "hover:bg-gray-50"
+            }`}
+          >
+            <span className={`text-xl font-bold tabular-nums leading-none ${filtroEstado === key ? color : "text-gray-400"}`}>
+              {count}
+            </span>
+            <span className={`text-[10px] font-semibold mt-0.5 uppercase tracking-wide ${filtroEstado === key ? "text-gray-700" : "text-gray-400"}`}>
+              {label}
+            </span>
+          </button>
         ))}
       </div>
 
-      {/* Filtros tipo */}
-      <div className="flex flex-wrap gap-2 mb-3">
-        {FILTROS_TIPO.map((f) => {
+      {/* Filtro tipo */}
+      <div className="flex gap-1.5 mb-5 overflow-x-auto pb-1">
+        {(["todos", "incidente", "mantenimiento", "solicitud", "sugerencia"] as const).map((f) => {
           const cfg = f === "todos" ? null : TIPO_CONFIG[f];
           return (
             <button
               key={f}
               onClick={() => setFiltroTipo(f)}
-              className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+              className={`flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
                 filtroTipo === f
                   ? "bg-[#0d1f3c] text-white border-[#0d1f3c]"
                   : "border-gray-200 text-gray-500 bg-white hover:bg-gray-50"
               }`}
             >
-              {f === "todos" ? "Todos los tipos" : cfg?.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Filtros estado */}
-      <div className="flex flex-wrap gap-2 mb-5">
-        {FILTROS_ESTADO.map((f) => {
-          const cfg = f === "todos" ? null : ESTADO_CONFIG[f];
-          return (
-            <button
-              key={f}
-              onClick={() => setFiltroEstado(f)}
-              className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
-                filtroEstado === f
-                  ? "bg-gray-800 text-white border-gray-800"
-                  : "border-gray-200 text-gray-500 bg-white hover:bg-gray-50"
-              }`}
-            >
-              {f === "todos" ? "Todos los estados" : cfg?.label}
+              {f === "todos" ? "Todos los tipos" : `${cfg?.icon} ${cfg?.label}`}
             </button>
           );
         })}
@@ -207,48 +236,85 @@ export default function ReportesAdminPage() {
         </div>
       ) : filtrados.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
+          <p className="text-3xl mb-2">📭</p>
           <p className="text-gray-400 text-sm">Sin reportes para los filtros seleccionados</p>
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-          {filtrados.map((r, i) => {
-            const tipo = TIPO_CONFIG[r.tipo] ?? { label: r.tipo, bg: "bg-gray-50", text: "text-gray-600" };
-            const estado = ESTADO_CONFIG[r.estado] ?? { label: r.estado, bg: "bg-gray-50", text: "text-gray-600" };
-            const fecha = formatFecha(r.creadoEn.seconds);
+        <div className="space-y-2">
+          {filtrados.map((r) => {
+            const tipo = TIPO_CONFIG[r.tipo];
+            const estado = ESTADO_CONFIG[r.estado];
+            const dias = diasDesde(r.creadoEn.seconds);
+            const diasInfo = DIAS_LABEL(dias, r.estado);
+            const isUrgente = r.urgente && r.estado !== "resuelto";
+
             return (
               <div
                 key={r.id}
                 onClick={() => abrirDetalle(r)}
-                className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer hover:bg-gray-50 transition-colors ${i > 0 ? "border-t border-gray-100" : ""}`}
+                className={`bg-white border rounded-2xl cursor-pointer hover:shadow-md transition-all active:scale-[0.995] ${
+                  isUrgente ? "border-red-200" : "border-gray-200"
+                }`}
               >
-                {r.urgente && <div className="w-1.5 h-10 bg-red-500 rounded-full flex-shrink-0" />}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                    <span className="text-sm font-semibold text-gray-900 truncate">{r.locatarioNombre}</span>
-                    <span className="text-xs text-gray-400">L.{r.local}</span>
-                    {r.urgente && <span className="text-xs font-bold text-red-500">URGENTE</span>}
-                  </div>
-                  <p className="text-xs text-gray-500 truncate">{r.descripcion}</p>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${tipo.bg} ${tipo.text}`}>{tipo.label}</span>
-                    <span className="text-xs text-gray-300">·</span>
-                    <span className="text-xs text-gray-400">{r.area}</span>
-                    <span className="text-xs text-gray-300">·</span>
-                    <span className="text-xs text-gray-400">{fecha}</span>
-                    {r.estado !== "resuelto" && (() => {
-                      const dias = Math.floor((Date.now() / 1000 - r.creadoEn.seconds) / 86400);
-                      if (dias < 1) return null;
-                      return (
-                        <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${dias >= 3 ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"}`}>
-                          {dias}d sin resolver
+                <div className="p-4">
+                  {/* Fila 1: identidad + estado */}
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {/* Avatar local */}
+                      <div className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center text-sm font-bold ${
+                        isUrgente ? "bg-red-100 text-red-700" : "bg-[#0d1f3c]/5 text-[#0d1f3c]"
+                      }`}>
+                        {r.local ? r.local.replace(/[^0-9]/g, "").slice(-3) || r.local.slice(0, 3) : "?"}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{r.locatarioNombre}</p>
+                          {isUrgente && (
+                            <span className="text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full flex-shrink-0">
+                              URGENTE
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400">Local {r.local} · {r.area}</p>
+                      </div>
+                    </div>
+                    {/* Chips de días + estado a la derecha */}
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {diasInfo && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${diasInfo.cls}`}>
+                          {diasInfo.text}
                         </span>
-                      );
-                    })()}
+                      )}
+                      <span className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full ${estado?.bg} ${estado?.text}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${estado?.dot}`} />
+                        {estado?.label}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Descripción */}
+                  <p className="text-sm text-gray-700 line-clamp-2 mb-2.5 pl-[3.25rem]">{r.descripcion}</p>
+
+                  {/* Fila inferior: tipo + fecha + acciones rápidas */}
+                  <div className="flex items-center justify-between pl-[3.25rem]">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${tipo?.bg} ${tipo?.text}`}>
+                        {tipo?.icon} {tipo?.label}
+                      </span>
+                      <span className="text-[10px] text-gray-300">·</span>
+                      <span className="text-[10px] text-gray-400">{formatFecha(r.creadoEn.seconds)}</span>
+                    </div>
+                    {/* Botones de avance rápido de estado */}
+                    {estado?.next && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); cambiarEstado(r, estado.next!); }}
+                        className="text-[10px] font-semibold px-2.5 py-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-[#0d1f3c] hover:text-white hover:border-[#0d1f3c] transition-colors"
+                      >
+                        → {ESTADO_LABEL[estado.next]}
+                      </button>
+                    )}
                   </div>
                 </div>
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${estado.bg} ${estado.text}`}>
-                  {estado.label}
-                </span>
               </div>
             );
           })}
@@ -262,63 +328,72 @@ export default function ReportesAdminPage() {
           onClick={() => setDetalle(null)}
         >
           <div
-            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg max-h-[92vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header modal */}
-            <div className="p-5 border-b border-gray-100">
+            <div className={`p-5 border-b ${detalle.urgente && detalle.estado !== "resuelto" ? "bg-red-50 border-red-100" : "border-gray-100"}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">
-                    {formatFecha(detalle.creadoEn.seconds)}
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-bold text-gray-900">{detalle.locatarioNombre}</p>
+                    {detalle.urgente && detalle.estado !== "resuelto" && (
+                      <span className="text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full">URGENTE</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Local {detalle.local} · {detalle.area} · {formatFecha(detalle.creadoEn.seconds)}
                   </p>
-                  <p className="font-semibold text-gray-900">{detalle.locatarioNombre}</p>
-                  <p className="text-sm text-gray-500">Local {detalle.local} · {detalle.area}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${TIPO_CONFIG[detalle.tipo]?.bg} ${TIPO_CONFIG[detalle.tipo]?.text}`}>
+                      {TIPO_CONFIG[detalle.tipo]?.icon} {TIPO_CONFIG[detalle.tipo]?.label}
+                    </span>
+                    {(() => {
+                      const d = diasDesde(detalle.creadoEn.seconds);
+                      const info = DIAS_LABEL(d, detalle.estado);
+                      return info ? (
+                        <span className={`text-xs px-2 py-1 rounded-lg ${info.cls}`}>{info.text} sin resolver</span>
+                      ) : null;
+                    })()}
+                  </div>
                 </div>
-                <button onClick={() => setDetalle(null)} className="text-gray-400 hover:text-gray-600 text-xl p-1">✕</button>
-              </div>
-              <div className="flex items-center gap-2 mt-3 flex-wrap">
-                <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${TIPO_CONFIG[detalle.tipo]?.bg} ${TIPO_CONFIG[detalle.tipo]?.text}`}>
-                  {TIPO_CONFIG[detalle.tipo]?.label}
-                </span>
-                {detalle.urgente && (
-                  <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-lg">URGENTE</span>
-                )}
+                <button onClick={() => setDetalle(null)} className="text-gray-400 hover:text-gray-600 text-xl p-1 flex-shrink-0">✕</button>
               </div>
             </div>
 
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-5">
               {/* Descripción */}
-              <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Descripción</p>
-                <p className="text-sm text-gray-800">{detalle.descripcion}</p>
+              <div className="bg-gray-50 rounded-xl p-4">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Descripción</p>
+                <p className="text-sm text-gray-800 leading-relaxed">{detalle.descripcion}</p>
               </div>
 
               {/* Foto */}
               {detalle.fotoUrl && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Foto</p>
-                  <img src={detalle.fotoUrl} alt="Foto reporte" className="w-full rounded-xl border border-gray-200 max-h-64 object-cover" />
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Foto adjunta</p>
+                  <img src={detalle.fotoUrl} alt="Foto" className="w-full rounded-xl border border-gray-200 max-h-64 object-cover" />
                 </div>
               )}
 
               {/* Cambiar estado */}
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Estado</p>
-                <div className="flex gap-2">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Estado del reporte</p>
+                <div className="grid grid-cols-3 gap-2">
                   {(["recibido", "en_proceso", "resuelto"] as const).map((e) => {
                     const cfg = ESTADO_CONFIG[e];
                     const activo = detalle.estado === e;
                     return (
                       <button
                         key={e}
-                        onClick={() => cambiarEstado(detalle.id, e)}
-                        className={`flex-1 text-xs font-semibold py-2.5 rounded-xl border-2 transition-all ${
+                        onClick={() => cambiarEstado(detalle, e)}
+                        className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all flex flex-col items-center gap-1 ${
                           activo
                             ? `${cfg.bg} ${cfg.text} border-current`
-                            : "border-gray-200 text-gray-400 hover:border-gray-300"
+                            : "border-gray-200 text-gray-400 hover:border-gray-300 hover:bg-gray-50"
                         }`}
                       >
+                        <span className={`w-2 h-2 rounded-full ${activo ? cfg.dot : "bg-gray-200"}`} />
                         {cfg.label}
                       </button>
                     );
@@ -326,16 +401,14 @@ export default function ReportesAdminPage() {
                 </div>
               </div>
 
-              {/* Comentario interno */}
+              {/* Respuesta */}
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-                  Respuesta / comentario interno
-                </p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Respuesta al locatario</p>
                 <textarea
                   value={comentario}
                   onChange={(e) => setComentario(e.target.value)}
                   rows={3}
-                  placeholder="Escribe una respuesta para el locatario o una nota interna..."
+                  placeholder="Escribe una respuesta o nota interna..."
                   className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#0d1f3c] resize-none"
                 />
                 <button
@@ -347,26 +420,30 @@ export default function ReportesAdminPage() {
                 </button>
               </div>
 
-              {/* Historial de trazabilidad */}
+              {/* Historial */}
               {detalle.historial && detalle.historial.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Historial</p>
-                  <div className="space-y-1.5">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Historial</p>
+                  <div className="relative pl-4 border-l-2 border-gray-100 space-y-3">
                     {[...detalle.historial].reverse().map((h, i) => (
-                      <div key={i} className="flex items-start gap-2 text-xs text-gray-500">
-                        <span className="mt-0.5 text-gray-300">•</span>
-                        <span className="flex-1">{h.accion}</span>
-                        <span className="text-gray-300 flex-shrink-0">
-                          {new Date(h.en.seconds * 1000).toLocaleDateString("es-PE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                        </span>
+                      <div key={i} className="relative">
+                        <div className="absolute -left-[1.3rem] top-1 w-2.5 h-2.5 rounded-full bg-white border-2 border-gray-300" />
+                        <p className="text-xs font-semibold text-gray-700">{h.accion}</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                          {new Date(h.en.seconds * 1000).toLocaleDateString("es-PE", {
+                            day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                          })}
+                        </p>
                       </div>
                     ))}
-                    <div className="flex items-start gap-2 text-xs text-gray-400">
-                      <span className="mt-0.5 text-gray-200">•</span>
-                      <span className="flex-1">Reporte creado</span>
-                      <span className="text-gray-300 flex-shrink-0">
-                        {new Date(detalle.creadoEn.seconds * 1000).toLocaleDateString("es-PE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                      </span>
+                    <div className="relative">
+                      <div className="absolute -left-[1.3rem] top-1 w-2.5 h-2.5 rounded-full bg-white border-2 border-gray-200" />
+                      <p className="text-xs text-gray-400">Reporte creado</p>
+                      <p className="text-[10px] text-gray-300 mt-0.5">
+                        {new Date(detalle.creadoEn.seconds * 1000).toLocaleDateString("es-PE", {
+                          day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                        })}
+                      </p>
                     </div>
                   </div>
                 </div>
