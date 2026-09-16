@@ -21,11 +21,17 @@ const LOGO_ICONO = "https://lh3.googleusercontent.com/d/1W27Jd23pjCvkMfP7JA3Od0P
 
 const navByRole: Record<string, NavItem[]> = {
   locatario: [
-    { label: "Mi perfil", href: "/locatario/perfil", icon: "👤" },
-    { divider: true, label: "Soporte Operaciones" },
-    { label: "Reportar", href: "/locatario/reportar", icon: "📝" },
+    { label: "Inicio", href: "/locatario", icon: "🏠" },
+    { divider: true, label: "Soporte Operacional" },
+    { label: "Nuevo reporte", href: "/locatario/reportar", icon: "📝" },
     { label: "Mis reportes", href: "/locatario/reportes", icon: "📋" },
     { label: "Comunicados", href: "/locatario/comunicados", icon: "📢" },
+    { divider: true, label: "Promociones" },
+    { label: "Solicitar promo", href: "/locatario/solicitar", icon: "📤" },
+    { label: "Mi catálogo", href: "/locatario/catalogo", icon: "📦" },
+    { label: "Mis solicitudes", href: "/locatario/solicitudes", icon: "🕐" },
+    { divider: true, label: "Mi cuenta" },
+    { label: "Mi perfil", href: "/locatario/perfil", icon: "👤" },
   ],
   marketing: [
     { label: "Panel", href: "/marketing/panel", icon: "📊" },
@@ -36,12 +42,13 @@ const navByRole: Record<string, NavItem[]> = {
   admin: [
     { label: "Dashboard", href: "/admin", icon: "📊" },
     { label: "Locatarios", href: "/admin/locatarios", icon: "👥" },
-    { label: "Solicitudes promo", href: "/admin/solicitudes", icon: "📋" },
-    { label: "Catálogos", href: "/admin/catalogos", icon: "📦" },
-    { divider: true, label: "Soporte Operaciones" },
+    { divider: true, label: "Soporte Operacional" },
     { label: "Reportes", href: "/admin/reportes", icon: "🔔" },
     { label: "Contratos", href: "/admin/contratos", icon: "📄" },
     { label: "Comunicados", href: "/admin/comunicados", icon: "📢" },
+    { divider: true, label: "Promociones" },
+    { label: "Solicitudes promo", href: "/admin/solicitudes", icon: "📋" },
+    { label: "Catálogos", href: "/admin/catalogos", icon: "📦" },
   ],
 };
 
@@ -54,6 +61,7 @@ export default function Sidebar() {
   const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
   const [installed, setInstalled] = useState(false);
   const [reportesSinAtender, setReportesSinAtender] = useState(0);
+  const [misReportesActivos, setMisReportesActivos] = useState(0);
 
   useEffect(() => {
     if (role !== "admin") return;
@@ -61,6 +69,17 @@ export default function Sidebar() {
     const unsub = onSnapshot(q, (snap) => setReportesSinAtender(snap.size));
     return () => unsub();
   }, [role]);
+
+  useEffect(() => {
+    if (role !== "locatario" || !user) return;
+    const q = query(
+      collection(db, "reportes"),
+      where("uid", "==", user.uid),
+      where("estado", "in", ["recibido", "en_proceso"])
+    );
+    const unsub = onSnapshot(q, (snap) => setMisReportesActivos(snap.size));
+    return () => unsub();
+  }, [role, user]);
 
   useEffect(() => {
     const handler = (e: Event) => { e.preventDefault(); setInstallPrompt(e); };
@@ -113,6 +132,11 @@ export default function Sidebar() {
               {item.href === "/admin/reportes" && reportesSinAtender > 0 && (
                 <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-tight">
                   {reportesSinAtender}
+                </span>
+              )}
+              {item.href === "/locatario/reportes" && misReportesActivos > 0 && (
+                <span className="ml-auto bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-tight">
+                  {misReportesActivos}
                 </span>
               )}
             </Link>
