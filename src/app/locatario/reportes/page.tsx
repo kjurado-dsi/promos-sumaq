@@ -1,12 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
+import {
+  collection, query, where, orderBy, onSnapshot,
+  doc, updateDoc, arrayUnion, Timestamp,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+
+interface Comentario {
+  texto: string;
+  por: "locatario" | "admin";
+  en: { seconds: number };
+}
 
 interface Reporte {
   id: string;
@@ -17,20 +26,21 @@ interface Reporte {
   estado: string;
   fotoUrl?: string;
   comentarioAdmin?: string;
+  comentarios?: Comentario[];
   creadoEn: { seconds: number };
 }
 
 const TIPO_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  incidente:    { label: "🚨 Incidente",    bg: "bg-red-50",    text: "text-red-700" },
-  mantenimiento:{ label: "🔧 Mantenimiento",bg: "bg-orange-50", text: "text-orange-700" },
-  solicitud:    { label: "📋 Solicitud",    bg: "bg-blue-50",   text: "text-blue-700" },
-  sugerencia:   { label: "💡 Sugerencia",   bg: "bg-yellow-50", text: "text-yellow-700" },
+  incidente:     { label: "🚨 Incidente",     bg: "bg-red-50",    text: "text-red-700" },
+  mantenimiento: { label: "🔧 Mantenimiento", bg: "bg-orange-50", text: "text-orange-700" },
+  solicitud:     { label: "📋 Solicitud",     bg: "bg-blue-50",   text: "text-blue-700" },
+  sugerencia:    { label: "💡 Sugerencia",    bg: "bg-yellow-50", text: "text-yellow-700" },
 };
 
 const ESTADO_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  recibido:   { label: "Recibido",    bg: "bg-gray-100",   text: "text-gray-600" },
-  en_proceso: { label: "En proceso",  bg: "bg-amber-50",   text: "text-amber-700" },
-  resuelto:   { label: "Resuelto ✓", bg: "bg-green-50",   text: "text-green-700" },
+  recibido:   { label: "Recibido",    bg: "bg-gray-100",  text: "text-gray-600" },
+  en_proceso: { label: "En proceso",  bg: "bg-amber-50",  text: "text-amber-700" },
+  resuelto:   { label: "Resuelto ✓", bg: "bg-green-50",  text: "text-green-700" },
 };
 
 function ReportesContent() {
@@ -39,6 +49,8 @@ function ReportesContent() {
   const [reportes, setReportes] = useState<Reporte[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandido, setExpandido] = useState<string | null>(null);
+  const [nuevoComentario, setNuevoComentario] = useState<Record<string, string>>({});
+  const [enviando, setEnviando] = useState<string | null>(null);
   const nuevo = params.get("nuevo") === "1";
 
   useEffect(() => {
@@ -56,7 +68,30 @@ function ReportesContent() {
   }, [user]);
 
   const formatFecha = (seconds: number) =>
-    new Date(seconds * 1000).toLocaleDateString("es-PE", { day: "numeric", month: "short", year: "numeric" });
+    new Date(seconds * 1000).toLocaleDateString("es-PE", {
+      day: "numeric", month: "short", year: "numeric",
+    });
+
+  const formatHora = (seconds: number) =>
+    new Date(seconds * 1000).toLocaleTimeString("es-PE", {
+      hour: "2-digit", minute: "2-digit",
+    });
+
+  const enviarComentario = async (reporteId: string) => {
+    const texto = (nuevoComentario[reporteId] ?? "").trim();
+    if (!texto || !user) return;
+    setEnviando(reporteId);
+    const entrada: Comentario = {
+      texto,
+      por: "locatario",
+      en: Timestamp.now() as unknown as { seconds: number },
+    };
+    await updateDoc(doc(db, "reportes", reporteId), {
+      comentarios: arrayUnion(entrada),
+    });
+    setNuevoComentario((prev) => ({ ...prev, [reporteId]: "" }));
+    setEnviando(null);
+  };
 
   return (
     <div className="p-4 md:p-8 max-w-xl">
@@ -102,8 +137,13 @@ function ReportesContent() {
             const tipo = TIPO_CONFIG[r.tipo] ?? { label: r.tipo, bg: "bg-gray-50", text: "text-gray-600" };
             const estado = ESTADO_CONFIG[r.estado] ?? { label: r.estado, bg: "bg-gray-50", text: "text-gray-600" };
             const abierto = expandido === r.id;
+            const comentariosOrdenados = [...(r.comentarios ?? [])].sort(
+              (a, b) => a.en.seconds - b.en.seconds
+            );
+
             return (
               <div key={r.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+                {/* Cabecera clickeable */}
                 <button
                   onClick={() => setExpandido(abierto ? null : r.id)}
                   className="w-full text-left p-4"
@@ -117,30 +157,98 @@ function ReportesContent() {
                         <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-lg">URGENTE</span>
                       )}
                     </div>
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${estado.bg} ${estado.text}`}>
-                      {estado.label}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {comentariosOrdenados.length > 0 && (
+                        <span className="text-[10px] bg-[#0d1f3c]/10 text-[#0d1f3c] px-1.5 py-0.5 rounded-full font-semibold">
+                          {comentariosOrdenados.length} nota{comentariosOrdenados.length > 1 ? "s" : ""}
+                        </span>
+                      )}
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${estado.bg} ${estado.text}`}>
+                        {estado.label}
+                      </span>
+                    </div>
                   </div>
                   <p className="text-sm text-gray-800 font-medium line-clamp-2">{r.descripcion}</p>
                   <div className="flex items-center gap-3 mt-2">
                     <p className="text-xs text-gray-400">{r.area}</p>
                     <span className="text-gray-200">·</span>
                     <p className="text-xs text-gray-400">{formatFecha(r.creadoEn.seconds)}</p>
+                    <span className="text-gray-200">·</span>
+                    <p className="text-xs text-gray-400">{abierto ? "▲ cerrar" : "▼ ver detalle"}</p>
                   </div>
                 </button>
 
+                {/* Panel expandido */}
                 {abierto && (
-                  <div className="border-t border-gray-100 px-4 py-3 space-y-3 bg-gray-50">
+                  <div className="border-t border-gray-100 bg-gray-50">
+                    {/* Foto */}
                     {r.fotoUrl && (
-                      <img src={r.fotoUrl} alt="Foto" className="w-full max-h-48 object-cover rounded-xl" />
+                      <div className="px-4 pt-3">
+                        <img src={r.fotoUrl} alt="Foto" className="w-full max-h-48 object-cover rounded-xl" />
+                      </div>
                     )}
-                    {r.comentarioAdmin ? (
-                      <div className="bg-[#0d1f3c]/5 border border-[#0d1f3c]/10 rounded-xl px-3 py-2.5">
+
+                    {/* Respuesta del admin */}
+                    {r.comentarioAdmin && (
+                      <div className="mx-4 mt-3 bg-[#0d1f3c]/5 border border-[#0d1f3c]/10 rounded-xl px-3 py-2.5">
                         <p className="text-xs font-bold text-[#0d1f3c] mb-1">Respuesta de Operaciones</p>
                         <p className="text-sm text-gray-700">{r.comentarioAdmin}</p>
                       </div>
+                    )}
+
+                    {/* Hilo de comentarios */}
+                    {comentariosOrdenados.length > 0 && (
+                      <div className="px-4 pt-3 space-y-2">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Notas del reporte</p>
+                        {comentariosOrdenados.map((c, i) => (
+                          <div
+                            key={i}
+                            className={`flex gap-2 ${c.por === "locatario" ? "justify-end" : "justify-start"}`}
+                          >
+                            <div
+                              className={`max-w-[85%] px-3 py-2 rounded-xl text-sm ${
+                                c.por === "locatario"
+                                  ? "bg-[#0d1f3c] text-white rounded-br-sm"
+                                  : "bg-white border border-gray-200 text-gray-700 rounded-bl-sm"
+                              }`}
+                            >
+                              <p className="leading-snug">{c.texto}</p>
+                              <p className={`text-[10px] mt-1 ${c.por === "locatario" ? "text-white/50" : "text-gray-400"}`}>
+                                {formatHora(c.en.seconds)}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Input para nuevo comentario (solo si no está resuelto) */}
+                    {r.estado !== "resuelto" ? (
+                      <div className="px-4 py-3 flex gap-2">
+                        <input
+                          type="text"
+                          value={nuevoComentario[r.id] ?? ""}
+                          onChange={(e) =>
+                            setNuevoComentario((prev) => ({ ...prev, [r.id]: e.target.value }))
+                          }
+                          onKeyDown={(e) => e.key === "Enter" && enviarComentario(r.id)}
+                          placeholder="Agregar una actualización..."
+                          className="flex-1 bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d1f3c]"
+                        />
+                        <button
+                          onClick={() => enviarComentario(r.id)}
+                          disabled={!nuevoComentario[r.id]?.trim() || enviando === r.id}
+                          className="bg-[#0d1f3c] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-[#1a3358] disabled:opacity-40 transition-colors flex-shrink-0"
+                        >
+                          {enviando === r.id ? "..." : "Enviar"}
+                        </button>
+                      </div>
                     ) : (
-                      <p className="text-xs text-gray-400 italic">Sin respuesta aún — te notificaremos cuando haya avances.</p>
+                      !r.comentarioAdmin && (
+                        <p className="px-4 py-3 text-xs text-gray-400 italic">
+                          Sin respuesta aún — te notificaremos cuando haya avances.
+                        </p>
+                      )
                     )}
                   </div>
                 )}

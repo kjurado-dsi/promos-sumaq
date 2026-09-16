@@ -13,6 +13,12 @@ interface HistorialItem {
   en: { seconds: number };
 }
 
+interface ComentarioLocatario {
+  texto: string;
+  por: "locatario" | "admin";
+  en: { seconds: number };
+}
+
 interface Reporte {
   id: string;
   uid: string;
@@ -25,6 +31,7 @@ interface Reporte {
   estado: string;
   fotoUrl?: string;
   comentarioAdmin?: string;
+  comentarios?: ComentarioLocatario[];
   historial?: HistorialItem[];
   creadoEn: { seconds: number };
 }
@@ -58,6 +65,7 @@ export default function ReportesAdminPage() {
   const [loading, setLoading] = useState(true);
   const [filtroEstado, setFiltroEstado] = useState<"todos" | "recibido" | "en_proceso" | "resuelto">("todos");
   const [filtroTipo, setFiltroTipo] = useState("todos");
+  const [busqueda, setBusqueda] = useState("");
   const [detalle, setDetalle] = useState<Reporte | null>(null);
   const [comentario, setComentario] = useState("");
   const [guardando, setGuardando] = useState(false);
@@ -87,6 +95,14 @@ export default function ReportesAdminPage() {
     .filter((r) => {
       if (filtroEstado !== "todos" && r.estado !== filtroEstado) return false;
       if (filtroTipo !== "todos" && r.tipo !== filtroTipo) return false;
+      if (busqueda) {
+        const q = busqueda.toLowerCase();
+        if (
+          !r.locatarioNombre?.toLowerCase().includes(q) &&
+          !r.local?.toLowerCase().includes(q) &&
+          !r.descripcion?.toLowerCase().includes(q)
+        ) return false;
+      }
       return true;
     })
     .sort((a, b) => {
@@ -168,8 +184,8 @@ export default function ReportesAdminPage() {
     <div className="p-4 md:p-6 max-w-5xl">
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+        <div className="flex-1">
           <h1 className="text-xl font-bold text-gray-900">Reportes operacionales</h1>
           <p className="text-sm text-gray-400 mt-0.5">
             {stats.recibido > 0
@@ -177,12 +193,21 @@ export default function ReportesAdminPage() {
               : "Todo atendido"}
           </p>
         </div>
-        {urgentes > 0 && (
-          <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-xs font-bold px-3 py-2 rounded-xl">
-            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-            {urgentes} urgente{urgentes > 1 ? "s" : ""}
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {urgentes > 0 && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-xs font-bold px-3 py-2 rounded-xl flex-shrink-0">
+              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              {urgentes} urgente{urgentes > 1 ? "s" : ""}
+            </div>
+          )}
+          <input
+            type="search"
+            placeholder="Buscar locatario, local..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="w-52 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d1f3c] bg-white"
+          />
+        </div>
       </div>
 
       {/* Stats rápidas + filtro estado en una sola barra */}
@@ -283,6 +308,11 @@ export default function ReportesAdminPage() {
                     </div>
                     {/* Chips de días + estado a la derecha */}
                     <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {r.comentarios && r.comentarios.length > 0 && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#0d1f3c]/10 text-[#0d1f3c]">
+                          💬 {r.comentarios.length}
+                        </span>
+                      )}
                       {diasInfo && (
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${diasInfo.cls}`}>
                           {diasInfo.text}
@@ -360,7 +390,29 @@ export default function ReportesAdminPage() {
                     })()}
                   </div>
                 </div>
-                <button onClick={() => setDetalle(null)} className="text-gray-400 hover:text-gray-600 text-xl p-1 flex-shrink-0">✕</button>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {/* Compartir por WhatsApp */}
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(
+                      `*Reporte Operativo — Sumaq Mercados*\n\n` +
+                      `📍 *Local:* ${detalle.local} — ${detalle.locatarioNombre}\n` +
+                      `🏷 *Tipo:* ${TIPO_CONFIG[detalle.tipo]?.icon ?? ""} ${TIPO_CONFIG[detalle.tipo]?.label ?? detalle.tipo}\n` +
+                      `📌 *Área:* ${detalle.area}\n` +
+                      (detalle.urgente ? `⚠️ *URGENTE*\n` : "") +
+                      `\n*Descripción:*\n${detalle.descripcion}\n\n` +
+                      `*Estado:* ${ESTADO_LABEL[detalle.estado] ?? detalle.estado}\n` +
+                      `📅 ${formatFecha(detalle.creadoEn.seconds)}`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors"
+                    title="Compartir por WhatsApp"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    Compartir
+                  </a>
+                  <button onClick={() => setDetalle(null)} className="text-gray-400 hover:text-gray-600 text-xl p-1">✕</button>
+                </div>
               </div>
             </div>
 
@@ -376,6 +428,34 @@ export default function ReportesAdminPage() {
                 <div>
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Foto adjunta</p>
                   <img src={detalle.fotoUrl} alt="Foto" className="w-full rounded-xl border border-gray-200 max-h-64 object-cover" />
+                </div>
+              )}
+
+              {/* Comentarios del locatario */}
+              {detalle.comentarios && detalle.comentarios.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+                    Actualizaciones del locatario ({detalle.comentarios.length})
+                  </p>
+                  <div className="space-y-2 bg-gray-50 rounded-xl p-3">
+                    {[...detalle.comentarios]
+                      .sort((a, b) => a.en.seconds - b.en.seconds)
+                      .map((c, i) => (
+                        <div key={i} className="flex gap-2.5 items-start">
+                          <div className="w-6 h-6 rounded-full bg-[#0d1f3c]/10 flex items-center justify-center text-[10px] font-bold text-[#0d1f3c] flex-shrink-0 mt-0.5">
+                            L
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-800">{c.texto}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">
+                              {new Date(c.en.seconds * 1000).toLocaleString("es-PE", {
+                                day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
                 </div>
               )}
 
