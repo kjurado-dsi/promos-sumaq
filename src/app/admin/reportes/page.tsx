@@ -71,14 +71,17 @@ export default function ReportesAdminPage() {
     return () => unsub();
   }, []);
 
+  // Stats se calculan sobre el subset filtrado por tipo (no por estado, ya que el estado es lo que muestran)
+  const porTipo = filtroTipo === "todos" ? reportes : reportes.filter((r) => r.tipo === filtroTipo);
+
   const stats = {
-    todos:      reportes.length,
-    recibido:   reportes.filter((r) => r.estado === "recibido").length,
-    en_proceso: reportes.filter((r) => r.estado === "en_proceso").length,
-    resuelto:   reportes.filter((r) => r.estado === "resuelto").length,
+    todos:      porTipo.length,
+    recibido:   porTipo.filter((r) => r.estado === "recibido").length,
+    en_proceso: porTipo.filter((r) => r.estado === "en_proceso").length,
+    resuelto:   porTipo.filter((r) => r.estado === "resuelto").length,
   };
 
-  const urgentes = reportes.filter((r) => r.urgente && r.estado !== "resuelto").length;
+  const urgentes = porTipo.filter((r) => r.urgente && r.estado !== "resuelto").length;
 
   const filtrados = reportes
     .filter((r) => {
