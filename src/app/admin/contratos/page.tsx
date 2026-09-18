@@ -1,294 +1,365 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useEffect, useState, useMemo } from "react";
 
 interface Contrato {
-  id: string;
   puesto: string;
   rubro: string;
-  locatarioNombre: string;
-  tipoContrato: "CONSTANTE" | "VARIABLE";
+  locatario: string;
+  tipoContrato: string;
   fechaInicio: string;
   duracionMeses: number;
   graciaMeses: number;
   inicioPago: string;
   finContrato: string;
-  rentaMensual: number;
-  rentaIncrementada?: number;
-  estado: "EN GRACIA" | "ACTIVO" | "TRANSFERIDO";
-  saldoGarantia: number;
-  observaciones?: string;
-  condicionIncremento?: string;
 }
 
-const ESTADOS = ["EN GRACIA", "ACTIVO", "TRANSFERIDO"] as const;
-
-const CONTRATOS_INICIALES: Omit<Contrato, "id">[] = [
-  { puesto: "CF-101", rubro: "HIGIENE", locatarioNombre: "Lisset Giovanna Fernández Ticona", tipoContrato: "CONSTANTE", fechaInicio: "26/05/2026", duracionMeses: 8, graciaMeses: 4, inicioPago: "26/09/2026", finContrato: "26/01/2027", rentaMensual: 200, estado: "EN GRACIA", saldoGarantia: 400 },
-  { puesto: "FR-114", rubro: "VERDURA", locatarioNombre: "Yessenia Quichca Ticlla", tipoContrato: "VARIABLE", fechaInicio: "16/05/2026", duracionMeses: 12, graciaMeses: 4, inicioPago: "16/09/2026", finContrato: "16/05/2027", rentaMensual: 200, rentaIncrementada: 650, estado: "EN GRACIA", saldoGarantia: 400, condicionIncremento: "A PARTIR DEL 9.º MES" },
-  { puesto: "CR-101", rubro: "CARNE", locatarioNombre: "Servicios Múltiples 3G Guadalupe García E.I.R.L.", tipoContrato: "VARIABLE", fechaInicio: "25/04/2026", duracionMeses: 12, graciaMeses: 4, inicioPago: "25/08/2026", finContrato: "25/04/2027", rentaMensual: 550, rentaIncrementada: 750, estado: "ACTIVO", saldoGarantia: 1100 },
-  { puesto: "PO-111", rubro: "POLLO", locatarioNombre: "Luis Alberto Hichcas Huayhuarina", tipoContrato: "CONSTANTE", fechaInicio: "06/05/2026", duracionMeses: 12, graciaMeses: 4, inicioPago: "06/09/2026", finContrato: "06/05/2027", rentaMensual: 400, estado: "TRANSFERIDO", saldoGarantia: 50 },
-  { puesto: "PO-112", rubro: "ABARROTES", locatarioNombre: "Roxana Claudet Valera Guerra", tipoContrato: "CONSTANTE", fechaInicio: "15/06/2026", duracionMeses: 6, graciaMeses: 4, inicioPago: "15/10/2026", finContrato: "15/12/2026", rentaMensual: 250, estado: "EN GRACIA", saldoGarantia: 500 },
-  { puesto: "PM-209", rubro: "ROPA", locatarioNombre: "Leidy Lorena Blanco Soto", tipoContrato: "CONSTANTE", fechaInicio: "13/07/2026", duracionMeses: 8, graciaMeses: 4, inicioPago: "13/11/2026", finContrato: "13/03/2027", rentaMensual: 350, estado: "EN GRACIA", saldoGarantia: 700 },
-  { puesto: "RF-109", rubro: "PESCADO", locatarioNombre: "Rosa", tipoContrato: "CONSTANTE", fechaInicio: "13/07/2026", duracionMeses: 4, graciaMeses: 4, inicioPago: "13/11/2026", finContrato: "13/11/2026", rentaMensual: 0, estado: "EN GRACIA", saldoGarantia: 0 },
-  { puesto: "RF-108", rubro: "JUGUERIA", locatarioNombre: "Alisson Chino", tipoContrato: "CONSTANTE", fechaInicio: "14/08/2026", duracionMeses: 8, graciaMeses: 4, inicioPago: "04/08/2026", finContrato: "14/04/2027", rentaMensual: 350, estado: "ACTIVO", saldoGarantia: 700 },
-  { puesto: "PL-101", rubro: "PLASTICOS", locatarioNombre: "Juan Gabriel", tipoContrato: "CONSTANTE", fechaInicio: "15/08/2026", duracionMeses: 8, graciaMeses: 4, inicioPago: "07/08/2026", finContrato: "15/04/2027", rentaMensual: 350, estado: "ACTIVO", saldoGarantia: 700 },
-];
-
-function estadoColor(estado: string) {
-  if (estado === "EN GRACIA") return "bg-amber-50 text-amber-700";
-  if (estado === "ACTIVO") return "bg-green-50 text-green-700";
-  return "bg-gray-100 text-gray-500";
+interface Movimiento {
+  fecha: string;
+  idMovimiento: string;
+  puesto: string;
+  locatario: string;
+  direccion: string;
+  concepto: string;
+  medio: string;
+  monto: number;
+  contraparte: string;
+  observaciones: string;
 }
 
-const EMPTY: Omit<Contrato, "id"> = {
-  puesto: "", rubro: "", locatarioNombre: "", tipoContrato: "CONSTANTE",
-  fechaInicio: "", duracionMeses: 12, graciaMeses: 4, inicioPago: "",
-  finContrato: "", rentaMensual: 0, estado: "EN GRACIA", saldoGarantia: 0,
+type Estado = "vencido" | "hoy" | "proxima_semana" | "proximo_mes" | "al_dia" | "sin_fecha";
+
+interface ContratoEnriquecido extends Contrato {
+  diasDiferencia: number; // negativo = vencido
+  estado: Estado;
+  inicioPagoDate: Date | null;
+}
+
+function parseFechaPeruana(s: string): Date | null {
+  if (!s) return null;
+  const [d, m, y] = s.split("/").map(Number);
+  if (!d || !m || !y) return null;
+  return new Date(y, m - 1, d);
+}
+
+function diasDesdeFecha(fecha: Date): number {
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  return Math.round((fecha.getTime() - hoy.getTime()) / 86400000);
+}
+
+function clasificar(dias: number | null): Estado {
+  if (dias === null) return "sin_fecha";
+  if (dias < 0) return "vencido";
+  if (dias === 0) return "hoy";
+  if (dias <= 7) return "proxima_semana";
+  if (dias <= 30) return "proximo_mes";
+  return "al_dia";
+}
+
+const ESTADO_CONFIG: Record<Estado, { label: string; bg: string; text: string; dot: string }> = {
+  vencido:        { label: "Vencido",       bg: "bg-red-100",    text: "text-red-700",    dot: "bg-red-500" },
+  hoy:            { label: "Vence hoy",     bg: "bg-orange-100", text: "text-orange-700", dot: "bg-orange-500" },
+  proxima_semana: { label: "Próx. 7 días",  bg: "bg-amber-100",  text: "text-amber-700",  dot: "bg-amber-400" },
+  proximo_mes:    { label: "Próx. 30 días", bg: "bg-yellow-50",  text: "text-yellow-700", dot: "bg-yellow-400" },
+  al_dia:         { label: "Al día",        bg: "bg-green-50",   text: "text-green-700",  dot: "bg-green-400" },
+  sin_fecha:      { label: "Sin fecha",     bg: "bg-gray-100",   text: "text-gray-500",   dot: "bg-gray-300" },
 };
+
+function formatFechaCorta(s: string): string {
+  const d = parseFechaPeruana(s);
+  if (!d) return s || "—";
+  return d.toLocaleDateString("es-PE", { day: "numeric", month: "short", year: "2-digit" });
+}
+
+function formatMonto(n: number): string {
+  const abs = Math.abs(n);
+  const str = abs.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (n < 0 ? "−" : "") + "S/ " + str;
+}
 
 export default function ContratosPage() {
   const [contratos, setContratos] = useState<Contrato[]>([]);
+  const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<Partial<Contrato> | null>(null);
-  const [guardando, setGuardando] = useState(false);
-  const [importando, setImportando] = useState(false);
-  const [importDone, setImportDone] = useState(false);
+  const [error, setError] = useState("");
+  const [seleccionado, setSeleccionado] = useState<string | null>(null);
+  const [filtro, setFiltro] = useState<Estado | "todos">("todos");
+  const [busqueda, setBusqueda] = useState("");
+  const [actualizado, setActualizado] = useState<Date | null>(null);
 
   const cargar = async () => {
-    const snap = await getDocs(collection(db, "contratos"));
-    setContratos(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Contrato)));
-    setLoading(false);
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/contratos");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setContratos(data.contratos ?? []);
+      setMovimientos(data.movimientos ?? []);
+      setActualizado(new Date());
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { cargar(); }, []);
 
-  const importarDatos = async () => {
-    setImportando(true);
-    for (const c of CONTRATOS_INICIALES) {
-      await addDoc(collection(db, "contratos"), c);
-    }
-    setImportDone(true);
-    setImportando(false);
-    cargar();
-  };
+  const enriquecidos = useMemo<ContratoEnriquecido[]>(() =>
+    contratos.map((c) => {
+      const d = parseFechaPeruana(c.inicioPago);
+      const dias = d ? diasDesdeFecha(d) : null;
+      return {
+        ...c,
+        inicioPagoDate: d,
+        diasDiferencia: dias ?? 999,
+        estado: clasificar(dias),
+      };
+    }).sort((a, b) => a.diasDiferencia - b.diasDiferencia),
+  [contratos]);
 
-  const guardar = async () => {
-    if (!modal) return;
-    setGuardando(true);
-    const { id, ...data } = modal as Contrato;
-    if (id) {
-      await updateDoc(doc(db, "contratos", id), data);
-    } else {
-      await addDoc(collection(db, "contratos"), data);
-    }
-    setModal(null);
-    setGuardando(false);
-    cargar();
-  };
+  const filtrados = useMemo(() =>
+    enriquecidos.filter((c) => {
+      const matchEstado = filtro === "todos" || c.estado === filtro;
+      const q = busqueda.toLowerCase();
+      const matchBusqueda = !q || c.locatario.toLowerCase().includes(q) || c.puesto.toLowerCase().includes(q) || c.rubro.toLowerCase().includes(q);
+      return matchEstado && matchBusqueda;
+    }),
+  [enriquecidos, filtro, busqueda]);
 
-  const eliminar = async (id: string) => {
-    if (!confirm("¿Eliminar este contrato?")) return;
-    await deleteDoc(doc(db, "contratos", id));
-    cargar();
-  };
+  const stats = useMemo(() => ({
+    vencido: enriquecidos.filter((c) => c.estado === "vencido").length,
+    hoy: enriquecidos.filter((c) => c.estado === "hoy").length,
+    proxima_semana: enriquecidos.filter((c) => c.estado === "proxima_semana").length,
+    proximo_mes: enriquecidos.filter((c) => c.estado === "proximo_mes").length,
+    al_dia: enriquecidos.filter((c) => c.estado === "al_dia").length,
+    total: enriquecidos.length,
+  }), [enriquecidos]);
 
-  const totalGarantias = contratos.filter(c => c.estado !== "TRANSFERIDO").reduce((s, c) => s + c.saldoGarantia, 0);
-  const activos = contratos.filter(c => c.estado === "ACTIVO").length;
-  const enGracia = contratos.filter(c => c.estado === "EN GRACIA").length;
+  const detalle = seleccionado ? enriquecidos.find((c) => c.puesto === seleccionado) ?? null : null;
+  const movsDetalle = detalle
+    ? movimientos.filter((m) => m.puesto === detalle.puesto)
+    : [];
+
+  const saldoPuesto = movsDetalle.reduce((acc, m) => acc + m.monto, 0);
 
   return (
     <div className="p-4 md:p-8">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Contratos de alquiler</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{contratos.length} contratos registrados</p>
+          <h1 className="text-2xl font-semibold text-gray-900">Control de Contratos</h1>
+          <p className="text-sm text-gray-400 mt-0.5">
+            {actualizado
+              ? `Actualizado ${actualizado.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}`
+              : "Cargando datos de Google Sheets…"}
+          </p>
         </div>
-        <div className="flex gap-2">
-          {contratos.length === 0 && !importDone && (
-            <button onClick={importarDatos} disabled={importando}
-              className="text-sm px-4 py-2 border border-amber-300 text-amber-700 bg-amber-50 rounded-xl hover:bg-amber-100 disabled:opacity-50 transition-colors font-medium">
-              {importando ? "Importando..." : "📥 Importar del Sheet"}
-            </button>
-          )}
-          <button onClick={() => setModal({ ...EMPTY })}
-            className="text-sm px-4 py-2 bg-[#0d1f3c] text-white rounded-xl hover:bg-[#1a3358] transition-colors font-medium">
-            + Nuevo contrato
-          </button>
-        </div>
+        <button
+          onClick={cargar}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+        >
+          <span className={loading ? "animate-spin" : ""}>🔄</span>
+          {loading ? "Actualizando…" : "Actualizar"}
+        </button>
       </div>
 
-      {/* Resumen */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="bg-green-50 border border-green-100 rounded-xl px-4 py-3">
-          <p className="text-xs text-green-600 font-semibold uppercase tracking-wide">Activos</p>
-          <p className="text-2xl font-bold text-green-800">{activos}</p>
+      {error && (
+        <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+          Error al cargar la hoja: {error}
         </div>
-        <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
-          <p className="text-xs text-amber-600 font-semibold uppercase tracking-wide">En gracia</p>
-          <p className="text-2xl font-bold text-amber-800">{enGracia}</p>
-        </div>
-        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
-          <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide">Total garantías</p>
-          <p className="text-xl font-bold text-blue-800">S/ {totalGarantias.toLocaleString()}</p>
-        </div>
+      )}
+
+      {/* Stats cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+        {([
+          { key: "vencido", label: "Vencidos", icon: "🔴" },
+          { key: "hoy", label: "Vence hoy", icon: "🟠" },
+          { key: "proxima_semana", label: "Próx. 7 días", icon: "🟡" },
+          { key: "proximo_mes", label: "Próx. 30 días", icon: "🟢" },
+          { key: "al_dia", label: "Al día", icon: "✅" },
+        ] as const).map(({ key, label, icon }) => {
+          const cfg = ESTADO_CONFIG[key];
+          const val = stats[key];
+          const activo = filtro === key;
+          return (
+            <button
+              key={key}
+              onClick={() => setFiltro(activo ? "todos" : key)}
+              className={`rounded-xl p-3 text-left border transition-all ${
+                activo
+                  ? `${cfg.bg} border-transparent ring-2 ring-offset-1 ${cfg.text.replace("text-", "ring-")}`
+                  : "bg-white border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="text-xs">{icon}</span>
+                <p className="text-[11px] text-gray-500 font-medium">{label}</p>
+              </div>
+              <p className={`text-2xl font-bold tabular-nums ${val > 0 && (key === "vencido" || key === "hoy") ? "text-red-600" : key === "proxima_semana" ? "text-amber-600" : "text-gray-900"}`}>
+                {loading ? "—" : val}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Buscador */}
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Buscar por locatario, puesto o rubro…"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          className="w-full max-w-sm border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d1f3c]"
+        />
       </div>
 
       {loading ? (
         <div className="flex justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0d1f3c]" />
         </div>
-      ) : contratos.length === 0 ? (
-        <div className="text-center py-16 text-gray-400 bg-white border border-gray-200 rounded-2xl">
-          <p className="text-4xl mb-3">📄</p>
-          <p className="font-medium text-gray-500">No hay contratos registrados</p>
-          <p className="text-sm mt-1">Importa los datos del Sheet o crea uno manualmente.</p>
-        </div>
+      ) : filtrados.length === 0 ? (
+        <p className="text-center py-16 text-gray-400 text-sm">Sin contratos para el filtro seleccionado</p>
       ) : (
         <div className="space-y-2">
-          {contratos.map((c) => (
-            <div key={c.id} className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-4 flex-wrap">
-              <div className="min-w-[70px]">
-                <p className="text-sm font-bold text-[#0d1f3c]">{c.puesto}</p>
-                <p className="text-xs text-gray-400">{c.rubro}</p>
-              </div>
-              <div className="flex-1 min-w-[160px]">
-                <p className="text-sm font-medium text-gray-800 truncate">{c.locatarioNombre}</p>
-                <p className="text-xs text-gray-400">{c.tipoContrato} · {c.duracionMeses} meses</p>
-              </div>
-              <div className="text-right min-w-[90px]">
-                <p className="text-sm font-semibold text-gray-900">S/ {c.rentaMensual.toFixed(0)}/mes</p>
-                <p className="text-xs text-gray-400">Garantía: S/ {c.saldoGarantia.toFixed(0)}</p>
-              </div>
-              <div>
-                <span className={`text-xs font-semibold px-2 py-1 rounded-full ${estadoColor(c.estado)}`}>
-                  {c.estado}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => setModal(c)} className="text-xs text-blue-600 hover:underline">Editar</button>
-                <button onClick={() => eliminar(c.id)} className="text-xs text-red-400 hover:underline">Eliminar</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+          {filtrados.map((c) => {
+            const cfg = ESTADO_CONFIG[c.estado];
+            const dias = c.diasDiferencia;
+            const vencido = c.estado === "vencido";
+            const abierto = seleccionado === c.puesto;
+            const movsLocal = movimientos.filter((m) => m.puesto === c.puesto);
+            const saldo = movsLocal.reduce((acc, m) => acc + m.monto, 0);
 
-      {/* Modal edición / nuevo */}
-      {modal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900">{(modal as Contrato).id ? "Editar contrato" : "Nuevo contrato"}</h2>
-              <button onClick={() => setModal(null)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
-            </div>
-            <div className="p-5 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Puesto *</label>
-                  <input value={modal.puesto ?? ""} onChange={e => setModal({ ...modal, puesto: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="CF-101" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Rubro</label>
-                  <input value={modal.rubro ?? ""} onChange={e => setModal({ ...modal, rubro: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="VERDURA" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Locatario / Razón social *</label>
-                <input value={modal.locatarioNombre ?? ""} onChange={e => setModal({ ...modal, locatarioNombre: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Tipo contrato</label>
-                  <select value={modal.tipoContrato ?? "CONSTANTE"} onChange={e => setModal({ ...modal, tipoContrato: e.target.value as "CONSTANTE" | "VARIABLE" })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option>CONSTANTE</option>
-                    <option>VARIABLE</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Estado</label>
-                  <select value={modal.estado ?? "EN GRACIA"} onChange={e => setModal({ ...modal, estado: e.target.value as Contrato["estado"] })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    {ESTADOS.map(e => <option key={e}>{e}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Duración (meses)</label>
-                  <input type="number" value={modal.duracionMeses ?? 12} onChange={e => setModal({ ...modal, duracionMeses: +e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Gracia (meses)</label>
-                  <input type="number" value={modal.graciaMeses ?? 4} onChange={e => setModal({ ...modal, graciaMeses: +e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Renta S/</label>
-                  <input type="number" value={modal.rentaMensual ?? 0} onChange={e => setModal({ ...modal, rentaMensual: +e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-              </div>
-              {modal.tipoContrato === "VARIABLE" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Renta tras incremento S/</label>
-                    <input type="number" value={modal.rentaIncrementada ?? ""} onChange={e => setModal({ ...modal, rentaIncrementada: +e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            return (
+              <div
+                key={c.puesto}
+                className={`bg-white rounded-2xl border overflow-hidden transition-all ${
+                  abierto ? "border-[#0d1f3c]/30 shadow-sm" : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                {/* Barra lateral de urgencia */}
+                <div className="flex">
+                  <div className={`w-1 flex-shrink-0 ${vencido || c.estado === "hoy" ? "bg-red-500" : c.estado === "proxima_semana" ? "bg-amber-400" : "bg-transparent"}`} />
+                  <div className="flex-1">
+                    {/* Cabecera */}
+                    <button
+                      className="w-full text-left px-4 py-3"
+                      onClick={() => setSeleccionado(abierto ? null : c.puesto)}
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* Avatar puesto */}
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0 ${vencido ? "bg-red-100 text-red-700" : "bg-[#0d1f3c]/8 text-[#0d1f3c]"}`}>
+                          {c.puesto.split("-")[0]}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-gray-900 text-sm">{c.locatario}</p>
+                            <span className="text-xs text-gray-400 font-mono">{c.puesto}</span>
+                            <span className="text-xs text-gray-400">· {c.rubro}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <span className="text-xs text-gray-500">
+                              Inicio de pago: <span className="font-medium">{formatFechaCorta(c.inicioPago)}</span>
+                            </span>
+                            <span className="text-gray-200">·</span>
+                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${c.tipoContrato === "VARIABLE" ? "bg-purple-50 text-purple-600" : "bg-blue-50 text-blue-600"}`}>
+                              {c.tipoContrato}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                          {/* Badge estado */}
+                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.bg} ${cfg.text}`}>
+                            {cfg.label}
+                          </span>
+                          {/* Días */}
+                          <span className={`text-xs tabular-nums font-bold ${vencido ? "text-red-600" : c.estado === "proxima_semana" ? "text-amber-600" : "text-gray-400"}`}>
+                            {c.estado === "sin_fecha" ? "" : vencido
+                              ? `${Math.abs(dias)}d vencido`
+                              : dias === 0
+                              ? "hoy"
+                              : `en ${dias}d`}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Panel expandido */}
+                    {abierto && (
+                      <div className="border-t border-gray-100 bg-gray-50 px-4 py-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                          {[
+                            { label: "Inicio contrato", val: formatFechaCorta(c.fechaInicio) },
+                            { label: "Inicio de pago", val: formatFechaCorta(c.inicioPago) },
+                            { label: "Fin de contrato", val: formatFechaCorta(c.finContrato) },
+                            { label: "Duración", val: c.duracionMeses ? `${c.duracionMeses} meses` : "—" },
+                            { label: "Período de gracia", val: c.graciaMeses ? `${c.graciaMeses} meses` : "—" },
+                            { label: "Tipo contrato", val: c.tipoContrato },
+                          ].map(({ label, val }) => (
+                            <div key={label} className="bg-white rounded-xl px-3 py-2.5 border border-gray-100">
+                              <p className="text-[11px] text-gray-400 uppercase tracking-wide">{label}</p>
+                              <p className="text-sm font-semibold text-gray-800 mt-0.5">{val || "—"}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Movimientos de caja */}
+                        {movsLocal.length > 0 && (
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Movimientos de caja</p>
+                              <span className={`text-sm font-bold ${saldo >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                Saldo: {formatMonto(saldo)}
+                              </span>
+                            </div>
+                            <div className="space-y-1.5">
+                              {movsLocal.map((m) => (
+                                <div key={m.idMovimiento} className="flex items-center gap-3 bg-white rounded-xl px-3 py-2.5 border border-gray-100">
+                                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${m.direccion === "INGRESO" ? "bg-green-400" : "bg-red-400"}`} />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium text-gray-700">{m.concepto}</p>
+                                    <p className="text-[11px] text-gray-400">{m.fecha}{m.observaciones ? ` · ${m.observaciones}` : ""}</p>
+                                  </div>
+                                  <p className={`text-sm font-bold tabular-nums flex-shrink-0 ${m.monto >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                    {formatMonto(m.monto)}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* WhatsApp */}
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(
+                            `*Control de Contrato — Sumaq Mercados*\n\n` +
+                            `📍 *Local:* ${c.puesto} — ${c.locatario}\n` +
+                            `🏷 *Rubro:* ${c.rubro}\n` +
+                            `📅 *Inicio de pago:* ${c.inicioPago}\n` +
+                            (c.estado === "vencido" ? `⚠️ *VENCIDO* hace ${Math.abs(dias)} días\n` : `✅ Inicio de pago en ${dias} días\n`) +
+                            `\n💰 *Saldo adelantos/garantías:* ${formatMonto(saldo)}`
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-3 flex items-center gap-2 justify-center w-full py-2.5 bg-[#25D366] text-white text-sm font-semibold rounded-xl hover:bg-[#1ebe5d] transition-colors"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.12 1.535 5.847L.057 23.571a.75.75 0 00.906.892l5.938-1.56A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.74 9.74 0 01-4.988-1.367l-.358-.212-3.714.976.993-3.628-.233-.374A9.73 9.73 0 012.25 12c0-5.376 4.374-9.75 9.75-9.75s9.75 4.374 9.75 9.75-4.374 9.75-9.75 9.75z"/></svg>
+                          Compartir por WhatsApp
+                        </a>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Condición incremento</label>
-                    <input value={modal.condicionIncremento ?? ""} onChange={e => setModal({ ...modal, condicionIncremento: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
-                </div>
-              )}
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Fecha inicio</label>
-                  <input value={modal.fechaInicio ?? ""} onChange={e => setModal({ ...modal, fechaInicio: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="DD/MM/YYYY" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Inicio de pagos</label>
-                  <input value={modal.inicioPago ?? ""} onChange={e => setModal({ ...modal, inicioPago: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="DD/MM/YYYY" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Fin contrato</label>
-                  <input value={modal.finContrato ?? ""} onChange={e => setModal({ ...modal, finContrato: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="DD/MM/YYYY" />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Garantía / Adelanto S/</label>
-                <input type="number" value={modal.saldoGarantia ?? 0} onChange={e => setModal({ ...modal, saldoGarantia: +e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Observaciones</label>
-                <textarea value={modal.observaciones ?? ""} onChange={e => setModal({ ...modal, observaciones: e.target.value })} rows={2}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button onClick={guardar} disabled={guardando}
-                  className="flex-1 bg-[#0d1f3c] text-white font-semibold py-3 rounded-xl hover:bg-[#1a3358] disabled:opacity-50 transition-colors">
-                  {guardando ? "Guardando..." : "Guardar"}
-                </button>
-                <button onClick={() => setModal(null)}
-                  className="px-5 border border-gray-300 text-gray-600 rounded-xl hover:bg-gray-50 transition-colors">
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
       )}
     </div>
