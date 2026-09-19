@@ -39,6 +39,7 @@ interface Contrato {
 }
 
 type FiltroEstado = "todos" | "vencido" | "proximo_7" | "proximo_30" | "al_dia";
+type Vista = "lista" | "matriz";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -79,7 +80,7 @@ function generarPeriodos(c: Contrato): string[] {
   while (cur <= limite) {
     lista.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}`);
     cur.setMonth(cur.getMonth() + 1);
-    if (lista.length > 36) break; // máx 3 años
+    if (lista.length > 36) break;
   }
   return lista;
 }
@@ -87,6 +88,11 @@ function generarPeriodos(c: Contrato): string[] {
 function labelPeriodo(p: string): string {
   const [y, m] = p.split("-").map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString("es-PE", { month: "short", year: "2-digit" });
+}
+
+function labelPeriodoLargo(p: string): string {
+  const [y, m] = p.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("es-PE", { month: "long", year: "numeric" });
 }
 
 function clasifContrato(c: Contrato): { dias: number; tipo: FiltroEstado } {
@@ -97,6 +103,12 @@ function clasifContrato(c: Contrato): { dias: number; tipo: FiltroEstado } {
   if (dias <= 7) return { dias, tipo: "proximo_7" };
   if (dias <= 30) return { dias, tipo: "proximo_30" };
   return { dias, tipo: "al_dia" };
+}
+
+function diasParaVencerContrato(c: Contrato): number | null {
+  const fin = parseFecha(c.finContrato);
+  if (!fin) return null;
+  return diffDias(fin);
 }
 
 function formatS(n: number): string {
@@ -111,6 +123,28 @@ function formatFecha(s: string): string {
 
 function uid6(): string {
   return Math.random().toString(36).slice(2, 8);
+}
+
+function waRecibo(c: Contrato, p: Pago): string {
+  const text = `✅ *RECIBO DE PAGO*\n*Sumaq Mercados*\n\nLocal: ${c.puesto}\nLocatario: ${c.locatario}\nPeríodo: ${labelPeriodoLargo(p.periodo)}\nMonto: ${formatS(p.monto)}\nMedio: ${p.medio}\nFecha: ${p.fechaPago}\n\nGracias por su pago 🙏`;
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+function waRecordatorio(c: Contrato, pendientes: number): string {
+  const total = pendientes * c.montoMensual;
+  const text = `Estimado(a) *${c.locatario}*,\n\nLe recordamos que tiene *${pendientes} mes${pendientes > 1 ? "es" : ""} pendiente${pendientes > 1 ? "s" : ""}* de alquiler en Sumaq Mercados (Local ${c.puesto}).\n\n💰 Monto mensual: ${formatS(c.montoMensual)}\n📋 Total adeudado: ${formatS(total)}\n\nPor favor acérquese a cancelar a la brevedad.\n\nGracias 🙏\n*Sumaq Mercados*`;
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+// genera los últimos N meses hasta hoy (para la matriz)
+function periodosMeses(n: number): string[] {
+  const res: string[] = [];
+  const hoy = hoyDate();
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    res.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+  return res;
 }
 
 const ESTADO_BADGE: Record<string, string> = {
@@ -140,8 +174,10 @@ export default function ContratosGestion() {
   const [busqueda, setBusqueda] = useState("");
   const [modalContrato, setModalContrato] = useState<Partial<Contrato> | null>(null);
   const [esNuevo, setEsNuevo] = useState(false);
-  const [modalPago, setModalPago] = useState<{ puesto: string; periodo: string; pago?: Pago } | null>(null);
+  const [modalPago, setModalPago] = useState<{ puesto: string; periodo: string; pago?: Pago; contrato?: Contrato } | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [vista, setVista] = useState<Vista>("lista");
+  const [ultimoPago, setUltimoPago] = useState<{ contrato: Contrato; pago: Pago } | null>(null);
 
   // ── Firestore live ────────────────────────────────────────────────────────
 
@@ -152,7 +188,7 @@ export default function ContratosGestion() {
         setContratos(
           snap.docs
             .map((d) => ({ pagos: [], ...d.data(), id: d.id } as unknown as Contrato))
-            .filter((c) => c.puesto) // excluye docs sin estructura válida
+            .filter((c) => c.puesto)
         );
         setLoading(false);
       },
@@ -228,7 +264,7 @@ export default function ContratosGestion() {
     await deleteDoc(doc(db, "contratos", puesto));
   };
 
-  // ── CRUD pagos (array en el doc del contrato) ─────────────────────────────
+  // ── CRUD pagos ────────────────────────────────────────────────────────────
 
   const guardarPago = async (puesto: string, datos: Omit<Pago, "pagoId" | "puesto">, pagoAnterior?: Pago) => {
     setGuardando(true);
@@ -239,6 +275,9 @@ export default function ContratosGestion() {
       }
       const nuevoPago: Pago = { ...datos, pagoId: pagoAnterior?.pagoId ?? uid6() };
       await updateDoc(ref, { pagos: arrayUnion(nuevoPago) });
+      // guardar para recibo WA
+      const c = contratos.find(x => x.puesto === puesto);
+      if (c) setUltimoPago({ contrato: c, pago: nuevoPago });
       setModalPago(null);
     } finally { setGuardando(false); }
   };
@@ -281,6 +320,31 @@ export default function ContratosGestion() {
     };
   }, [enriquecidos]);
 
+  const statsFinancieros = useMemo(() => {
+    const mes = periodoActual();
+    const activos = enriquecidos.filter(c => c.estadoContrato === "activo");
+    const esperado = activos
+      .filter(c => generarPeriodos(c).includes(mes))
+      .reduce((s, c) => s + (c.montoMensual || 0), 0);
+    const cobrado = enriquecidos.reduce((s, c) =>
+      s + (c.pagos || []).filter(p => p.periodo === mes).reduce((ss, p) => ss + p.monto, 0), 0);
+    const pendiente = Math.max(0, esperado - cobrado);
+    const conMora = activos.filter(c => {
+      const ps = generarPeriodos(c);
+      const pagados = new Set((c.pagos || []).map(p => p.periodo));
+      return ps.some(p => p < mes && !pagados.has(p));
+    }).length;
+    return { esperado, cobrado, pendiente, conMora };
+  }, [enriquecidos]);
+
+  const contratosVencer = useMemo(() =>
+    enriquecidos.filter(c => {
+      if (c.estadoContrato !== "activo") return false;
+      const d = diasParaVencerContrato(c);
+      return d !== null && d >= 0 && d <= 60;
+    }).sort((a, b) => (diasParaVencerContrato(a) ?? 999) - (diasParaVencerContrato(b) ?? 999)),
+  [enriquecidos]);
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -311,7 +375,54 @@ export default function ContratosGestion() {
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Resumen financiero del mes */}
+        <div className="bg-[#0d1f3c] rounded-2xl p-4 mb-4 text-white">
+          <p className="text-xs font-bold uppercase tracking-wider text-white/50 mb-3">
+            Resumen {labelPeriodoLargo(periodoActual())}
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: "Esperado", val: statsFinancieros.esperado, color: "text-white", sub: "este mes" },
+              { label: "Cobrado",  val: statsFinancieros.cobrado,  color: "text-green-300", sub: "registrado" },
+              { label: "Pendiente",val: statsFinancieros.pendiente,color: statsFinancieros.pendiente > 0 ? "text-amber-300" : "text-green-300", sub: "por cobrar" },
+              { label: "Con mora", val: null, count: statsFinancieros.conMora, color: statsFinancieros.conMora > 0 ? "text-red-300" : "text-green-300", sub: "locatarios" },
+            ].map(({ label, val, count, color, sub }) => (
+              <div key={label}>
+                <p className="text-[11px] text-white/50 mb-0.5">{label}</p>
+                <p className={`text-xl font-bold tabular-nums ${color}`}>
+                  {loading ? "—" : val !== null && val !== undefined ? formatS(val) : count}
+                </p>
+                <p className="text-[10px] text-white/30">{sub}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Alerta contratos por vencer */}
+        {contratosVencer.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
+            <p className="text-xs font-bold text-amber-700 uppercase tracking-wide mb-2">
+              ⚠️ {contratosVencer.length} contrato{contratosVencer.length > 1 ? "s" : ""} por vencer en los próximos 60 días
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {contratosVencer.map(c => {
+                const d = diasParaVencerContrato(c);
+                return (
+                  <div key={c.puesto} className="bg-white border border-amber-200 rounded-xl px-3 py-2 text-xs">
+                    <span className="font-bold text-gray-800">{c.puesto}</span>
+                    <span className="text-gray-500 mx-1">·</span>
+                    <span className="text-gray-600">{c.locatario}</span>
+                    <span className={`ml-2 font-semibold ${d !== null && d <= 7 ? "text-red-600" : "text-amber-600"}`}>
+                      {d === 0 ? "¡hoy!" : d !== null ? `${d}d` : ""}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Stats semáforo */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
           {([
             { key: "vencido",    icon: "🔴", label: "Vencidos",     color: "text-red-600" },
@@ -331,12 +442,20 @@ export default function ContratosGestion() {
           ))}
         </div>
 
-        {/* Buscador */}
-        <div className="flex gap-2 mb-4">
+        {/* Buscador + vista toggle */}
+        <div className="flex gap-2 mb-4 flex-wrap">
           <input type="text" placeholder="Buscar locatario, puesto o rubro…"
             value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
-            className="flex-1 max-w-sm bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d1f3c]/20"
+            className="flex-1 min-w-[200px] bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d1f3c]/20"
           />
+          <div className="flex bg-white border border-gray-200 rounded-xl overflow-hidden">
+            {(["lista", "matriz"] as Vista[]).map((v) => (
+              <button key={v} onClick={() => setVista(v)}
+                className={`px-4 py-2.5 text-sm font-medium transition-colors ${vista === v ? "bg-[#0d1f3c] text-white" : "text-gray-500 hover:bg-gray-50"}`}>
+                {v === "lista" ? "☰ Lista" : "⊞ Matriz"}
+              </button>
+            ))}
+          </div>
           {(filtro !== "todos" || busqueda) && (
             <button onClick={() => { setFiltro("todos"); setBusqueda(""); }}
               className="px-3 py-2 text-xs text-gray-500 bg-white border border-gray-200 rounded-xl hover:bg-gray-50">
@@ -345,19 +464,48 @@ export default function ContratosGestion() {
           )}
         </div>
 
-        {/* Lista */}
+        {/* Toast recibo WA */}
+        {ultimoPago && (
+          <div className="mb-4 bg-green-50 border border-green-200 rounded-2xl p-4 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-sm font-semibold text-green-800">
+                ✅ Pago registrado — {ultimoPago.contrato.locatario} · {formatS(ultimoPago.pago.monto)}
+              </p>
+              <p className="text-xs text-green-600 mt-0.5">¿Compartir recibo?</p>
+            </div>
+            <div className="flex gap-2">
+              <a href={waRecibo(ultimoPago.contrato, ultimoPago.pago)} target="_blank" rel="noreferrer"
+                className="px-4 py-2 bg-[#25d366] text-white text-xs font-bold rounded-xl hover:opacity-90 transition-opacity flex items-center gap-1.5">
+                📲 Recibo por WhatsApp
+              </a>
+              <button onClick={() => setUltimoPago(null)}
+                className="px-3 py-2 text-xs text-gray-500 bg-white border border-gray-200 rounded-xl hover:bg-gray-50">
+                Cerrar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Contenido principal */}
         {loading ? (
           <div className="flex flex-col items-center py-24 gap-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0d1f3c]" />
             <p className="text-sm text-gray-400">Cargando…</p>
           </div>
+        ) : vista === "matriz" ? (
+          <MatrizMensual
+            contratos={filtrados}
+            onCeldaClick={(puesto, periodo, pago, c) =>
+              setModalPago({ puesto, periodo, pago, contrato: c })
+            }
+          />
         ) : filtrados.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl border border-gray-200">
             <p className="text-4xl mb-3">📄</p>
             <p className="font-semibold text-gray-600">Sin contratos</p>
             {contratos.length === 0 && (
               <p className="text-sm text-gray-400 mt-2 max-w-xs mx-auto">
-                Presiona <strong>Sync Google Sheets</strong> para importar los datos del Google Sheets
+                Presiona <strong>Sync Google Sheets</strong> para importar los datos
               </p>
             )}
           </div>
@@ -377,11 +525,9 @@ export default function ContratosGestion() {
                   className={`bg-white rounded-2xl border overflow-hidden transition-shadow ${abierto ? "shadow-md border-gray-300" : "border-gray-200 hover:border-gray-300"}`}
                 >
                   <div className="flex">
-                    {/* Barra lateral color */}
                     <div className={`w-1 flex-shrink-0 ${vencidoC ? "bg-red-500" : c.tipo === "proximo_7" ? "bg-amber-400" : c.tipo === "proximo_30" ? "bg-yellow-300" : "bg-green-400"}`} />
 
                     <div className="flex-1 min-w-0">
-                      {/* Fila cabecera */}
                       <div className="flex items-center gap-3 px-4 py-3.5">
                         {/* Avatar */}
                         <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${vencidoC ? "bg-red-100" : "bg-[#0d1f3c]/8"}`}>
@@ -418,8 +564,14 @@ export default function ContratosGestion() {
                           </div>
                         </div>
 
-                        {/* Estado + acciones */}
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {/* Acciones rápidas */}
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {pendientes > 0 && c.montoMensual > 0 && (
+                            <a href={waRecordatorio(c, pendientes)} target="_blank" rel="noreferrer"
+                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-green-50 text-lg transition-colors" title="Recordatorio WhatsApp">
+                              📲
+                            </a>
+                          )}
                           <div className="text-right mr-1">
                             <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full block ${ESTADO_BADGE[c.tipo] ?? "bg-gray-100 text-gray-500"}`}>
                               {LABEL_FILTRO[c.tipo] ?? "Al día"}
@@ -466,7 +618,7 @@ export default function ContratosGestion() {
                               <div className="flex items-center justify-between mb-2.5">
                                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Pagos mensuales</p>
                                 <button
-                                  onClick={() => setModalPago({ puesto: c.puesto, periodo: hoyP })}
+                                  onClick={() => setModalPago({ puesto: c.puesto, periodo: hoyP, contrato: c })}
                                   className="text-xs px-3 py-1.5 bg-[#0d1f3c] text-white rounded-lg font-medium hover:bg-[#1a3358] transition-colors"
                                 >+ Registrar pago</button>
                               </div>
@@ -477,7 +629,7 @@ export default function ContratosGestion() {
                                   const esVencido = per < hoyP && !p;
                                   return (
                                     <button key={per}
-                                      onClick={() => setModalPago({ puesto: c.puesto, periodo: per, pago: p })}
+                                      onClick={() => setModalPago({ puesto: c.puesto, periodo: per, pago: p, contrato: c })}
                                       className={`flex flex-col items-center px-3 py-2 rounded-xl border text-center min-w-[62px] transition-all ${
                                         p        ? "bg-green-50 border-green-200 hover:border-green-400" :
                                         esVencido ? "bg-red-50 border-red-200 hover:border-red-300" :
@@ -490,6 +642,8 @@ export default function ContratosGestion() {
                                         <>
                                           <span className="text-[10px] text-green-600 font-bold">✓</span>
                                           <span className="text-[10px] text-green-600">{formatS(p.monto)}</span>
+                                          {/* Botón recibo WA inline */}
+                                          <span className="text-[9px] text-green-500 mt-0.5">📲</span>
                                         </>
                                       ) : esVencido ? (
                                         <span className="text-[10px] text-red-500 font-semibold">Pendiente</span>
@@ -549,12 +703,117 @@ export default function ContratosGestion() {
           puesto={modalPago.puesto}
           periodo={modalPago.periodo}
           pagoExistente={modalPago.pago}
+          contrato={modalPago.contrato}
           guardando={guardando}
           onGuardar={(datos) => guardarPago(modalPago.puesto, datos, modalPago.pago)}
           onEliminar={modalPago.pago ? () => eliminarPago(modalPago.puesto, modalPago.pago!) : undefined}
           onCerrar={() => setModalPago(null)}
         />
       )}
+    </div>
+  );
+}
+
+// ── Matriz mensual ────────────────────────────────────────────────────────────
+
+function MatrizMensual({ contratos, onCeldaClick }: {
+  contratos: (Contrato & { dias: number; tipo: FiltroEstado })[];
+  onCeldaClick: (puesto: string, periodo: string, pago: Pago | undefined, c: Contrato) => void;
+}) {
+  const meses = periodosMeses(6); // últimos 6 meses incluyendo el actual
+  const hoyP = periodoActual();
+
+  if (contratos.length === 0) {
+    return (
+      <div className="text-center py-20 bg-white rounded-2xl border border-gray-200">
+        <p className="text-4xl mb-3">📋</p>
+        <p className="font-semibold text-gray-600">Sin contratos para mostrar</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              <th className="text-left px-4 py-3 font-semibold text-gray-500 min-w-[160px] sticky left-0 bg-gray-50 z-10">
+                Local / Locatario
+              </th>
+              {meses.map((m) => (
+                <th key={m} className={`px-2 py-3 font-semibold text-center min-w-[80px] ${m === hoyP ? "text-[#0d1f3c]" : "text-gray-400"}`}>
+                  <span className={`px-2 py-1 rounded-lg ${m === hoyP ? "bg-[#0d1f3c]/10 text-[#0d1f3c]" : ""}`}>
+                    {labelPeriodo(m)}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {contratos.map((c, idx) => {
+              const pagosPorPeriodo: Record<string, Pago> = {};
+              for (const p of (c.pagos ?? [])) pagosPorPeriodo[p.periodo] = p;
+              const ps = new Set(generarPeriodos(c));
+
+              return (
+                <tr key={c.puesto} className={`border-b border-gray-100 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50/40"}`}>
+                  <td className={`px-4 py-2.5 sticky left-0 z-10 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50/40"}`}>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${c.tipo === "vencido" ? "bg-red-500" : c.tipo === "proximo_7" ? "bg-amber-400" : c.tipo === "proximo_30" ? "bg-yellow-300" : "bg-green-400"}`} />
+                      <div>
+                        <p className="font-semibold text-gray-800">{c.locatario}</p>
+                        <p className="text-[10px] text-gray-400 font-mono">{c.puesto}</p>
+                      </div>
+                    </div>
+                  </td>
+                  {meses.map((m) => {
+                    const pago = pagosPorPeriodo[m];
+                    const aplica = ps.has(m);
+                    const esVencido = m < hoyP && !pago && aplica;
+                    const esActual = m === hoyP && aplica;
+
+                    return (
+                      <td key={m} className="px-1 py-2 text-center">
+                        {!aplica ? (
+                          <span className="text-gray-200 text-base">—</span>
+                        ) : (
+                          <button
+                            onClick={() => onCeldaClick(c.puesto, m, pago, c)}
+                            className={`w-full py-1.5 rounded-lg font-semibold transition-all hover:ring-2 hover:ring-offset-1 ${
+                              pago ? "bg-green-100 text-green-700 hover:ring-green-300" :
+                              esVencido ? "bg-red-100 text-red-600 hover:ring-red-300" :
+                              esActual ? "bg-amber-100 text-amber-700 hover:ring-amber-300" :
+                              "bg-gray-100 text-gray-400 hover:ring-gray-300"
+                            }`}
+                          >
+                            {pago ? `✓ ${formatS(pago.monto).replace("S/ ", "")}` :
+                             esVencido ? "Pend." :
+                             esActual ? "Hoy" : "—"}
+                          </button>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex gap-4 flex-wrap">
+        {[
+          { cls: "bg-green-100 text-green-700", label: "Pagado" },
+          { cls: "bg-red-100 text-red-600", label: "Pendiente" },
+          { cls: "bg-amber-100 text-amber-700", label: "Mes actual" },
+          { cls: "bg-gray-100 text-gray-400", label: "No aplica" },
+        ].map(({ cls, label }) => (
+          <div key={label} className="flex items-center gap-1.5">
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${cls}`}>{label[0]}</span>
+            <span className="text-[11px] text-gray-500">{label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -681,12 +940,14 @@ function Sec({ title, children }: { title: string; children: React.ReactNode }) 
 
 // ── Modal pago ────────────────────────────────────────────────────────────────
 
-function ModalPago({ puesto, periodo, pagoExistente, guardando, onGuardar, onEliminar, onCerrar }: {
-  puesto: string; periodo: string; pagoExistente?: Pago; guardando: boolean;
+function ModalPago({ puesto, periodo, pagoExistente, contrato, guardando, onGuardar, onEliminar, onCerrar }: {
+  puesto: string; periodo: string; pagoExistente?: Pago; contrato?: Contrato; guardando: boolean;
   onGuardar: (d: Omit<Pago, "pagoId" | "puesto">) => void;
   onEliminar?: () => void; onCerrar: () => void;
 }) {
-  const [monto, setMonto] = useState(String(pagoExistente?.monto ?? ""));
+  const [monto, setMonto] = useState(
+    pagoExistente?.monto ? String(pagoExistente.monto) : (contrato?.montoMensual ? String(contrato.montoMensual) : "")
+  );
   const [fechaPago, setFechaPago] = useState(
     pagoExistente?.fechaPago ?? new Date().toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" })
   );
@@ -699,6 +960,9 @@ function ModalPago({ puesto, periodo, pagoExistente, guardando, onGuardar, onEli
 
   const [y, m] = periodoEdit.split("-");
   const labelP = y && m ? new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("es-PE", { month: "long", year: "numeric" }) : periodoEdit;
+
+  // Recibo WA para pago existente
+  const reciboWAUrl = pagoExistente && contrato ? waRecibo(contrato, pagoExistente) : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
@@ -746,6 +1010,13 @@ function ModalPago({ puesto, periodo, pagoExistente, guardando, onGuardar, onEli
           >
             {guardando ? "Guardando…" : pagoExistente ? "Actualizar pago" : "Confirmar pago ✓"}
           </button>
+          {/* Recibo WA para pago ya registrado */}
+          {reciboWAUrl && (
+            <a href={reciboWAUrl} target="_blank" rel="noreferrer"
+              className="w-full py-2.5 text-sm font-semibold text-[#25d366] border border-[#25d366]/30 rounded-xl flex items-center justify-center gap-2 hover:bg-green-50 transition-colors">
+              📲 Compartir recibo por WhatsApp
+            </a>
+          )}
           {onEliminar && (
             <button onClick={onEliminar} className="w-full py-2.5 text-sm text-red-500 hover:text-red-700 transition-colors">
               Eliminar pago
