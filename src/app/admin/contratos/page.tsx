@@ -125,6 +125,26 @@ function uid6(): string {
   return Math.random().toString(36).slice(2, 8);
 }
 
+function esParcial(pago: Pago, montoMensual: number): boolean {
+  return montoMensual > 0 && pago.monto < montoMensual * 0.99;
+}
+
+function calcularMora(c: Contrato, tasaPct = 5): number {
+  const mes = periodoActual();
+  const ps = generarPeriodos(c);
+  let mora = 0;
+  for (const p of ps) {
+    if (p >= mes || !c.montoMensual) continue;
+    const pago = (c.pagos || []).find(x => x.periodo === p);
+    if (!pago) {
+      mora += c.montoMensual * (tasaPct / 100);
+    } else if (esParcial(pago, c.montoMensual)) {
+      mora += (c.montoMensual - pago.monto) * (tasaPct / 100);
+    }
+  }
+  return mora;
+}
+
 function waRecibo(c: Contrato, p: Pago): string {
   const text = `✅ *RECIBO DE PAGO*\n*Sumaq Mercados*\n\nLocal: ${c.puesto}\nLocatario: ${c.locatario}\nPeríodo: ${labelPeriodoLargo(p.periodo)}\nMonto: ${formatS(p.monto)}\nMedio: ${p.medio}\nFecha: ${p.fechaPago}\n\nGracias por su pago 🙏`;
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
@@ -558,7 +578,7 @@ export default function ContratosGestion() {
                             )}
                             {pendientes > 0 && ps.length > 0 && (
                               <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
-                                {pendientes} mes{pendientes > 1 ? "es" : ""} sin registrar
+                                {pendientes} mes{pendientes > 1 ? "es" : ""}{c.montoMensual > 0 ? ` · ${formatS(pendientes * c.montoMensual)}` : " sin registrar"}
                               </span>
                             )}
                           </div>
@@ -627,10 +647,13 @@ export default function ContratosGestion() {
                                   const p = pagosPorPeriodo[per];
                                   const esHoy = per === hoyP;
                                   const esVencido = per < hoyP && !p;
+                                  const parcial = p ? esParcial(p, c.montoMensual) : false;
+                                  const saldo = parcial ? c.montoMensual - p!.monto : 0;
                                   return (
                                     <button key={per}
                                       onClick={() => setModalPago({ puesto: c.puesto, periodo: per, pago: p, contrato: c })}
                                       className={`flex flex-col items-center px-3 py-2 rounded-xl border text-center min-w-[62px] transition-all ${
+                                        parcial  ? "bg-orange-50 border-orange-200 hover:border-orange-400" :
                                         p        ? "bg-green-50 border-green-200 hover:border-green-400" :
                                         esVencido ? "bg-red-50 border-red-200 hover:border-red-300" :
                                         esHoy    ? "bg-amber-50 border-amber-300" :
@@ -638,11 +661,15 @@ export default function ContratosGestion() {
                                       }`}
                                     >
                                       <span className="text-[11px] font-semibold text-gray-700">{labelPeriodo(per)}</span>
-                                      {p ? (
+                                      {p && parcial ? (
+                                        <>
+                                          <span className="text-[10px] text-orange-600 font-bold">½ {formatS(p.monto)}</span>
+                                          <span className="text-[9px] text-orange-400">-{formatS(saldo)}</span>
+                                        </>
+                                      ) : p ? (
                                         <>
                                           <span className="text-[10px] text-green-600 font-bold">✓</span>
                                           <span className="text-[10px] text-green-600">{formatS(p.monto)}</span>
-                                          {/* Botón recibo WA inline */}
                                           <span className="text-[9px] text-green-500 mt-0.5">📲</span>
                                         </>
                                       ) : esVencido ? (
@@ -658,6 +685,26 @@ export default function ContratosGestion() {
                               </div>
                             </div>
                           )}
+
+                          {/* Mora estimada */}
+                          {(() => {
+                            const mora = calcularMora(c);
+                            if (mora <= 0 || !c.montoMensual) return null;
+                            const mesesMora = ps.filter(p => {
+                              if (p >= hoyP) return false;
+                              const pg = pagosPorPeriodo[p];
+                              return !pg || esParcial(pg, c.montoMensual);
+                            }).length;
+                            return (
+                              <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-center justify-between gap-3">
+                                <div>
+                                  <p className="text-xs font-bold text-red-700 uppercase tracking-wide">Recargo por mora estimado</p>
+                                  <p className="text-[11px] text-red-400 mt-0.5">{mesesMora} mes{mesesMora > 1 ? "es" : ""} × 5%/mes sobre saldo vencido</p>
+                                </div>
+                                <p className="text-xl font-bold text-red-700 tabular-nums">{formatS(mora)}</p>
+                              </div>
+                            );
+                          })()}
 
                           {/* Notas */}
                           <div>
@@ -780,14 +827,16 @@ function MatrizMensual({ contratos, onCeldaClick }: {
                         ) : (
                           <button
                             onClick={() => onCeldaClick(c.puesto, m, pago, c)}
-                            className={`w-full py-1.5 rounded-lg font-semibold transition-all hover:ring-2 hover:ring-offset-1 ${
+                            className={`w-full py-1.5 rounded-lg font-semibold transition-all hover:ring-2 hover:ring-offset-1 text-[10px] ${
+                              pago && esParcial(pago, c.montoMensual) ? "bg-orange-100 text-orange-600 hover:ring-orange-300" :
                               pago ? "bg-green-100 text-green-700 hover:ring-green-300" :
                               esVencido ? "bg-red-100 text-red-600 hover:ring-red-300" :
                               esActual ? "bg-amber-100 text-amber-700 hover:ring-amber-300" :
                               "bg-gray-100 text-gray-400 hover:ring-gray-300"
                             }`}
                           >
-                            {pago ? `✓ ${formatS(pago.monto).replace("S/ ", "")}` :
+                            {pago && esParcial(pago, c.montoMensual) ? `½ ${formatS(pago.monto).replace("S/ ", "")}` :
+                             pago ? `✓ ${formatS(pago.monto).replace("S/ ", "")}` :
                              esVencido ? "Pend." :
                              esActual ? "Hoy" : "—"}
                           </button>
@@ -804,6 +853,7 @@ function MatrizMensual({ contratos, onCeldaClick }: {
       <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex gap-4 flex-wrap">
         {[
           { cls: "bg-green-100 text-green-700", label: "Pagado" },
+          { cls: "bg-orange-100 text-orange-600", label: "Parcial" },
           { cls: "bg-red-100 text-red-600", label: "Pendiente" },
           { cls: "bg-amber-100 text-amber-700", label: "Mes actual" },
           { cls: "bg-gray-100 text-gray-400", label: "No aplica" },
@@ -984,6 +1034,16 @@ function ModalPago({ puesto, periodo, pagoExistente, contrato, guardando, onGuar
             <label className={lbl}>Monto (S/.)</label>
             <input type="number" value={monto} onChange={(e) => setMonto(e.target.value)}
               className={`${inp} text-xl font-bold`} placeholder="0.00" autoFocus />
+            {contrato?.montoMensual && contrato.montoMensual > 0 && (
+              <p className="text-[11px] text-gray-400 mt-1.5">
+                Esperado: <strong className="text-gray-600">{formatS(contrato.montoMensual)}</strong>
+                {parseFloat(monto) > 0 && parseFloat(monto) < contrato.montoMensual * 0.99 && (
+                  <span className="ml-2 text-orange-500 font-semibold">
+                    · pago parcial — saldo {formatS(contrato.montoMensual - parseFloat(monto))}
+                  </span>
+                )}
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
